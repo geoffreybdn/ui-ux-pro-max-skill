@@ -8,7 +8,7 @@ export async function TopBar({ loggedIn, children }: { loggedIn?: boolean; child
     <header className="topbar">
       <div className="container">
         <Link href="/" className="brand">
-          <img src="/icon.svg" alt="" width={32} height={32} style={{ flex: "none" }} />
+          <img src="/logo.png" alt="" width={44} height={44} style={{ flex: "none" }} />
           {pizzeriaName}
         </Link>
         <div className="row">

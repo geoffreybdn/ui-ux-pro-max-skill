@@ -15,13 +15,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     orientation: "portrait",
     lang: "fr",
     display: "standalone",
-    background_color: "#fef2f2",
+    background_color: "#f5ecd8",
     theme_color: "#dc2626",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
     ],
     shortcuts: [
       { name: "Ma carte", url: "/carte", icons: [{ src: "/icon-192.png", sizes: "192x192" }] },

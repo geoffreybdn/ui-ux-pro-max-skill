@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell, Crown, Flame, KeyRound, Stamp, LayoutDashboard, LogOut, Menu, QrCode, ScanLine, Search,
+  Bell, Flame, KeyRound, Stamp, LayoutDashboard, LogOut, Menu, QrCode, ScanLine, Search,
   ShieldCheck, Upload, Users, WalletCards, X,
 } from "lucide-react";
 
@@ -42,7 +42,7 @@ export function AdminShell({
     <div className="admin-shell">
       <aside className={`sidebar ${open ? "is-open" : ""}`} aria-label="Navigation administration">
         <div className="sidebar-brand">
-          <Crown size={30} className="sidebar-crown" aria-hidden />
+          <img src="/logo.png" alt="" width={52} height={52} className="sidebar-logo" />
           <div>
             <div className="sidebar-name">{pizzeriaName}</div>
             <div className="sidebar-sub">Programme de fidélité</div>

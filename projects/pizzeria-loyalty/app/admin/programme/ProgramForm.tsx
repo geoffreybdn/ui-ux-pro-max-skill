@@ -91,7 +91,12 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
 
       <section className="panel stack">
         <h2><Settings2 size={20} style={{ verticalAlign: "-3px" }} /> Général</h2>
-        <label>Nom de la pizzeria<input className="input" value={s.pizzeriaName} onChange={(e) => set("pizzeriaName", e.target.value)} /></label>
+        <div className="grid">
+          <label>Nom de la pizzeria<input className="input" value={s.pizzeriaName} onChange={(e) => set("pizzeriaName", e.target.value)} /></label>
+          <label>Ville <span className="hint">(affichée sur la page d&apos;accueil)</span>
+            <input className="input" value={s.city} onChange={(e) => set("city", e.target.value)} placeholder="Knutange" />
+          </label>
+        </div>
       </section>
 
       <section className="panel stack">

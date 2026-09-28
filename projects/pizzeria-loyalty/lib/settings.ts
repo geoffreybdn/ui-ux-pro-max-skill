@@ -11,6 +11,7 @@ export type NotificationTemplate = { enabled: boolean; title: string; body: stri
 
 export type Settings = {
   pizzeriaName: string;
+  city: string;
   stamps: {
     required: number;
     reward: string;
@@ -40,7 +41,8 @@ export const NOTIFICATION_INFO: Record<NotificationKey, { label: string; when: s
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  pizzeriaName: process.env.NEXT_PUBLIC_PIZZERIA_NAME || "La Bella Pizza",
+  pizzeriaName: process.env.NEXT_PUBLIC_PIZZERIA_NAME || "A la Bella Pizza",
+  city: "",
   stamps: { required: 10, reward: "Pizza offerte", rule: "quantity", minAmount: 0, unitLabel: "pizza", maxPerVisit: 0 },
   welcomeStamps: 1,
   birthdayStamps: 2,
@@ -85,6 +87,7 @@ export function normalizeSettings(raw: unknown): Settings {
 
   return {
     pizzeriaName: str(r.pizzeriaName, d.pizzeriaName, 50).trim() || d.pizzeriaName,
+    city: str(r.city, d.city, 40).trim(),
     stamps: {
       required: int(st.required, d.stamps.required, 2, 50),
       reward: str(st.reward, d.stamps.reward, 60).trim() || d.stamps.reward,

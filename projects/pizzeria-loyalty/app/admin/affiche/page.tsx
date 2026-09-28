@@ -34,6 +34,7 @@ export default async function Page() {
       </div>
 
       <section className="poster" aria-label="Affiche à imprimer">
+        <img src="/logo.png" alt={s.pizzeriaName} className="poster-logo" />
         <div className="poster-kicker">Carte de fidélité</div>
         <h2 className="poster-title">{s.pizzeriaName}</h2>
         <p className="poster-lead">Scannez, inscrivez-vous en 30 secondes et cumulez à chaque visite 🍕</p>

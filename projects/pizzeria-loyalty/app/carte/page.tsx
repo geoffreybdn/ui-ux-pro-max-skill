@@ -74,6 +74,7 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
               <div className="points">{shown}<span style={{ fontSize: "1.6rem", opacity: 0.8 }}>/{req}</span></div>
               <div className="small" style={{ opacity: 0.85 }}>tampons · {s.stamps.reward}</div>
             </div>
+            <img src="/logo.png" alt="" className="card-logo" width={76} height={76} />
           </div>
           <div className="stamp-grid stamp-grid-card" style={{ gridTemplateColumns: `repeat(${stampCols(req)}, 1fr)` }} aria-hidden>
             {Array.from({ length: req }, (_, i) => (

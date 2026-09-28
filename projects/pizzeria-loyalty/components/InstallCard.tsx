@@ -69,7 +69,7 @@ export function InstallCard({ force = false }: { force?: boolean }) {
         <X size={16} />
       </button>
       <div className="row" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
-        <img src="/icon-192.png" alt="" width={48} height={48} style={{ borderRadius: 12, flex: "none" }} />
+        <img src="/logo.png" alt="" width={52} height={52} style={{ flex: "none" }} />
         <div>
           <h3 style={{ marginBottom: 4 }}>Votre carte sur l&apos;écran d&apos;accueil</h3>
           <p className="small muted" style={{ margin: 0 }}>

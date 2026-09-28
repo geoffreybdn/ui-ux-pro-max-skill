@@ -1,9 +1,9 @@
 // Service worker : notifications push + carte disponible hors connexion
-const CACHE = "pz-card-v1";
+const CACHE = "pz-card-v2";
 const OFFLINE_PAGES = ["/carte"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/icon.svg", "/icon-192.png"])).catch(() => {}));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/logo.png", "/icon-192.png"])).catch(() => {}));
   self.skipWaiting();
 });
 
