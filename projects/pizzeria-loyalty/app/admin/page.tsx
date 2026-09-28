@@ -20,9 +20,10 @@ export default async function Dashboard() {
         (select count(*)::int from transactions where type = 'earn' and created_at > now() - interval '7 days') as visits_week,
         (select count(*)::int from legacy_customers where claimed_by is null) as legacy_pending`,
     getActivePromotion(),
-    sql<{ id: number; name: string; type: string; points: number; created_at: string }>`
-      select t.id, c.name, t.type, t.points, t.created_at
+    sql<{ id: number; name: string; type: string; points: number; created_at: string; staff: string | null }>`
+      select t.id, c.name, t.type, t.points, t.created_at, s.name as staff
       from transactions t join customers c on c.id = t.customer_id
+      left join customers s on s.id = t.staff_id
       order by t.created_at desc limit 12`,
   ]);
 
@@ -54,13 +55,14 @@ export default async function Dashboard() {
         <h2>Derniers mouvements</h2>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Client</th><th>Type</th><th style={{ textAlign: "right" }}>Points</th></tr></thead>
+            <thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Par</th><th style={{ textAlign: "right" }}>Points</th></tr></thead>
             <tbody>
               {recent.map((t) => (
                 <tr key={t.id}>
                   <td className="small">{new Date(t.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</td>
                   <td>{t.name}</td>
                   <td><span className="badge">{t.type}</span></td>
+                  <td className="small">{t.staff ?? "—"}</td>
                   <td className={t.points >= 0 ? "plus" : "minus"} style={{ textAlign: "right" }}>{t.points > 0 ? "+" : ""}{t.points}</td>
                 </tr>
               ))}

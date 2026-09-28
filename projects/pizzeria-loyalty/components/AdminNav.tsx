@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bell, Flame, Gift, KeyRound, ScanLine, Upload, Users } from "lucide-react";
+import { BarChart3, Bell, Flame, Gift, KeyRound, ScanLine, ShieldCheck, Upload, Users } from "lucide-react";
 
 const LINKS = [
   { href: "/admin", label: "Tableau de bord", icon: BarChart3, admin: true },
@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/admin/recompenses", label: "Récompenses", icon: Gift, admin: true },
   { href: "/admin/import", label: "Import CSV", icon: Upload, admin: true },
   { href: "/admin/notifications", label: "Notifications", icon: Bell, admin: true },
+  { href: "/admin/equipe", label: "Équipe", icon: ShieldCheck, admin: true },
 ];
 
 export function AdminNav({ isAdmin }: { isAdmin: boolean }) {

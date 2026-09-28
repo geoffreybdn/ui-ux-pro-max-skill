@@ -2,6 +2,7 @@ import QRCode from "qrcode";
 import { Flame, Gift, PartyPopper } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { PushToggle } from "@/components/PushToggle";
+import { InstallCard } from "@/components/InstallCard";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { getActivePromotion, getRewards } from "@/lib/loyalty";
@@ -69,6 +70,8 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
           <div className="card-code">{user.card_code}</div>
           <p className="small center" style={{ opacity: 0.85, marginTop: 8 }}>Présentez ce QR code en caisse</p>
         </section>
+
+        <InstallCard force={Boolean(params.bienvenue)} />
 
         <PushToggle />
 

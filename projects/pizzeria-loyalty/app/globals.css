@@ -149,3 +149,9 @@ th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Invite « Ajouter à l'écran d'accueil » */
+.install-card { position: relative; border: 2px dashed var(--gold); }
+.install-close { position: absolute; top: 6px; right: 6px; min-height: 32px; padding: 4px 8px; }
+.install-steps { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.install-steps svg { vertical-align: -3px; }

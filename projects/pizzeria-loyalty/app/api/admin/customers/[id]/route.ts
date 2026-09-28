@@ -23,6 +23,7 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
   const { role } = await req.json().catch(() => ({}));
   if (!["customer", "staff", "admin"].includes(role)) bad("Rôle invalide");
   if (id === me.id) bad("Vous ne pouvez pas modifier votre propre rôle");
-  await sql`update customers set role = ${role} where id = ${id}`;
+  const [updated] = await sql`update customers set role = ${role} where id = ${id} returning id`;
+  if (!updated) bad("Client introuvable", 404);
   return NextResponse.json({ ok: true });
 });

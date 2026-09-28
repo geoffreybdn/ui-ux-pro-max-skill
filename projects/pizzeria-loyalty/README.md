@@ -11,7 +11,8 @@ Application web (PWA) de carte de fidélité pour pizzeria, prête pour **Vercel
 | **Notifications push** (Android, ordinateur, iPhone une fois l'app ajoutée à l'écran d'accueil) | **Promotions double / triple points** appliquées automatiquement et notifiées |
 | Historique des points | **Codes d'inscription** (bonus, nombre max d'utilisations, expiration, lien à partager) |
 | Récupération automatique des **points de l'ancienne carte** | **Import CSV** des anciens clients et de leurs points |
-| | Récompenses, gestion des rôles (client / équipe / admin), message push manuel |
+| **Carte sur l'écran d'accueil** (bouton sur Android, mode d'emploi pas à pas sur iPhone) | **Plusieurs administrateurs et employés** (page *Équipe*), tous peuvent scanner |
+| Carte consultable **hors connexion** (QR toujours affiché en caisse) | Récompenses, message push manuel, suivi « qui a scanné » |
 
 ### Notifications automatiques
 - `+X points` après chaque passage en caisse (avec mention de la promo en cours)
@@ -52,8 +53,19 @@ Colonnes obligatoires `email` et `points`, facultatives `nom` et `telephone` (s�
    | `NEXT_PUBLIC_PIZZERIA_NAME` | `La Bella Pizza` |
    | `POINTS_PER_EURO` | `1` |
 
-6. Redéployer, puis **inscrivez-vous avec l'e-mail de `ADMIN_EMAILS`** : ce compte devient administrateur.
-   Dans *Admin → Clients*, passez vos employés en rôle **Équipe** : ils n'ont accès qu'au scanner.
+6. Redéployer, puis **inscrivez-vous avec l'e-mail de `ADMIN_EMAILS`** : ce compte devient administrateur
+   (`ADMIN_EMAILS` accepte plusieurs e-mails séparés par des virgules).
+
+### Plusieurs admins / employés
+*Admin → Équipe* : saisissez un e-mail et choisissez **Administrateur** (accès complet) ou **Employé** (scanner
+uniquement). Si la personne n'a pas de compte, il est créé avec le mot de passe choisi. Chaque passage en caisse
+enregistre qui a scanné (visible au tableau de bord et dans *Équipe*). Les admins peuvent aussi ajouter l'app sur
+leur téléphone et ouvrir directement le scanner (Android : appui long sur l'icône → *Scanner*).
+
+### Carte sur l'écran d'accueil
+L'app est une PWA : sur Android/Chrome un bouton **Ajouter à l'écran d'accueil** apparaît sur la carte ; sur
+iPhone, les étapes Safari (Partager → *Sur l'écran d'accueil*) sont affichées. Une fois installée, la carte
+s'ouvre en plein écran, fonctionne hors connexion et peut recevoir les notifications (obligatoire sur iPhone).
 
 Le cron (`vercel.json`) tourne une fois par jour (compatible plan Hobby). Les promos programmées
 sont aussi annoncées dès qu'un admin ouvre le tableau de bord.

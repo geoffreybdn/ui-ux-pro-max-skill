@@ -6,14 +6,23 @@ export default function manifest(): MetadataRoute.Manifest {
     name: `${PIZZERIA_NAME} — Fidélité`,
     short_name: PIZZERIA_NAME,
     description: "Votre carte de fidélité, vos points et nos promos.",
+    id: "/carte",
     start_url: "/carte",
+    scope: "/",
+    orientation: "portrait",
+    lang: "fr",
     display: "standalone",
     background_color: "#fef2f2",
     theme_color: "#dc2626",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+    ],
+    shortcuts: [
+      { name: "Ma carte", url: "/carte", icons: [{ src: "/icon-192.png", sizes: "192x192" }] },
+      { name: "Scanner (équipe)", url: "/admin/scanner", icons: [{ src: "/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

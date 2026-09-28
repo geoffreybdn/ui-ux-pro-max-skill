@@ -5,7 +5,7 @@ import { PIZZERIA_NAME } from "@/lib/config";
 export const metadata: Metadata = {
   title: { default: `${PIZZERIA_NAME} — Fidélité`, template: `%s · ${PIZZERIA_NAME}` },
   description: "Cumulez des points à chaque pizza et profitez de nos promotions.",
-  icons: { icon: "/icon.svg", apple: "/icon-192.png" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: PIZZERIA_NAME, statusBarStyle: "default" },
 };
 
