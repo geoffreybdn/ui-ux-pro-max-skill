@@ -16,9 +16,7 @@ export const POST = handle(async (req: Request) => {
     switch (body.action) {
       case "add": {
         if (!(count >= 1) || count > MAX) bad(`Nombre de tampons entre 1 et ${MAX}`);
-        const amountCents = body.amount ? Math.round(Number(String(body.amount).replace(",", ".")) * 100) : 0;
-        if (!(amountCents >= 0) || amountCents > 100_000) bad("Montant invalide");
-        return NextResponse.json(await recordVisit({ customerId, count, amountCents, staffId: staff.id }));
+        return NextResponse.json(await recordVisit({ customerId, count, staffId: staff.id }));
       }
       case "remove": {
         if (!(count >= 1) || count > MAX) bad(`Nombre de tampons entre 1 et ${MAX}`);

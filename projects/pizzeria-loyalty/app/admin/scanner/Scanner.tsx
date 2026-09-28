@@ -5,7 +5,7 @@ import { Camera, CameraOff, Flame, Gift, Minus, Plus, Search, Stamp, X } from "l
 import { api } from "@/components/useApi";
 import type { Customer } from "@/lib/db";
 import type { Settings } from "@/lib/settings";
-import { applyPromo, cardState, computeStamps, plural, ruleLabel, stampCols } from "@/lib/program";
+import { applyPromo, cardState, plural, ruleLabel, stampCols } from "@/lib/program";
 
 type Props = {
   isAdmin: boolean;
@@ -23,7 +23,6 @@ export function Scanner({ isAdmin, card, promo }: Props) {
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [mode, setMode] = useState<"add" | "remove">("add");
   const [count, setCount] = useState("1");
-  const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
@@ -32,14 +31,10 @@ export function Scanner({ isAdmin, card, promo }: Props) {
   const n = Math.max(0, Math.min(MAX, Math.trunc(Number(count)) || 0));
   const credited = mode === "add" ? applyPromo(card, n, promoMultiplier) : n;
   const QUICK = [1, 2, 3, 4, 5];
+  // Règle « par pizza » : en ajout, on compte des pizzas (1 pizza = 1 tampon)
+  const perItem = mode === "add" && card.rule === "quantity";
+  const unit = (k: number) => (perItem ? plural(k, card.unitLabel).replace(/^\d+ /, "") : k > 1 ? "tampons" : "tampon");
 
-  // Règle « par tranche de X € » : le montant saisi pré-remplit le nombre de tampons
-  function onAmount(v: string) {
-    setAmount(v);
-    const cents = Math.round((Number(v.replace(",", ".")) || 0) * 100);
-    const suggested = computeStamps({ ...card, maxPerVisit: 0 }, { amountCents: cents, quantity: 0, promoMultiplier: 1 });
-    if (v.trim()) setCount(String(suggested));
-  }
   const step = (d: number) => setCount(String(Math.max(1, Math.min(MAX, (n || 0) + d))));
 
   const lookup = useCallback(async (q: string) => {
@@ -101,7 +96,6 @@ export function Scanner({ isAdmin, card, promo }: Props) {
       });
       setCustomer({ ...customer, stamps: Number(res.stampsBalance ?? customer.stamps) });
       setMessage({ kind: "success", text: success(res) });
-      setAmount("");
       setCount("1");
       setMode("add");
     } catch (err) {
@@ -217,7 +211,7 @@ export function Scanner({ isAdmin, card, promo }: Props) {
                 if (note === null) return;
                 act({ action: "remove", count: n, note }, (r) => `${r.summary} retiré(s) ✔`);
               } else {
-                act({ action: "add", count: n, amount: card.rule === "amount" ? amount : undefined }, (r) => `${r.summary} ✔`);
+                act({ action: "add", count: n }, (r) => `${r.summary} ✔`);
               }
             }}
           >
@@ -237,13 +231,8 @@ export function Scanner({ isAdmin, card, promo }: Props) {
               </p>
             )}
 
-            {mode === "add" && card.rule === "amount" && (
-              <label>
-                Montant de la commande (€) <span className="hint">(facultatif — calcule le nombre de tampons)</span>
-                <input className="input" inputMode="decimal" value={amount} onChange={(e) => onAmount(e.target.value)} placeholder="24,50" />
-              </label>
-            )}
 
+            {perItem && <div className="small" style={{ fontWeight: 700 }}>Nombre de {card.unitLabel}s</div>}
             <div className="quick-picks" role="group" aria-label="Nombre rapide">
               {QUICK.map((q) => (
                 <button
@@ -262,7 +251,7 @@ export function Scanner({ isAdmin, card, promo }: Props) {
             <div className="stepper">
               <button type="button" className="btn" onClick={() => step(-1)} disabled={n <= 1} aria-label="Un de moins"><Minus size={20} /></button>
               <label className="stepper-field">
-                <span className="sr-only">Nombre de tampons à {mode === "add" ? "ajouter" : "retirer"}</span>
+                <span className="sr-only">{perItem ? `Nombre de ${card.unitLabel}s` : `Nombre de tampons à ${mode === "add" ? "ajouter" : "retirer"}`}</span>
                 <input
                   className="input"
                   type="number"
@@ -273,7 +262,7 @@ export function Scanner({ isAdmin, card, promo }: Props) {
                   onChange={(e) => setCount(e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <span className="small muted">tampon{n > 1 ? "s" : ""}</span>
+                <span className="small muted">{unit(n)}</span>
               </label>
               <button type="button" className="btn" onClick={() => step(1)} disabled={n >= MAX} aria-label="Un de plus"><Plus size={20} /></button>
             </div>
@@ -287,7 +276,11 @@ export function Scanner({ isAdmin, card, promo }: Props) {
             )}
 
             <button className={`btn btn-block btn-lg ${mode === "add" ? "btn-primary" : "btn-danger"}`} disabled={busy || n < 1}>
-              {n < 1 ? "Choisissez un nombre" : mode === "add" ? `Ajouter ${plural(credited, "tampon")}` : `Retirer ${plural(n, "tampon")}`}
+              {n < 1
+                ? "Choisissez un nombre"
+                : mode === "add"
+                  ? `Ajouter ${plural(credited, "tampon")}${perItem ? ` (${plural(n, card.unitLabel)})` : ""}`
+                  : `Retirer ${plural(n, "tampon")}`}
             </button>
           </form>
 

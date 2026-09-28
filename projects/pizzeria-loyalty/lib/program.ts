@@ -1,27 +1,8 @@
 // Règles pures de la carte à tampons (utilisables côté serveur ET navigateur).
 import type { Settings } from "./settings";
 
-export type StampRule = "visit" | "amount" | "quantity";
+export type StampRule = "quantity" | "visit";
 type StampConfig = Settings["stamps"];
-
-/**
- * Tampons gagnés lors d'un passage :
- * - visit    : 1 tampon par passage (si la commande atteint le minimum)
- * - amount   : 1 tampon par tranche de X € dépensés
- * - quantity : le nombre saisi en caisse (ex. nombre de pizzas)
- * La promo en cours multiplie le résultat (x2 = tampons doublés), dans la limite du plafond par passage.
- */
-export function computeStamps(
-  s: StampConfig,
-  opts: { amountCents: number; quantity: number; promoMultiplier: number }
-): number {
-  let base = 0;
-  if (s.rule === "visit") base = opts.amountCents >= Math.round(s.minAmount * 100) ? 1 : 0;
-  else if (s.rule === "amount") base = s.amountPerStamp > 0 ? Math.floor(opts.amountCents / Math.round(s.amountPerStamp * 100)) : 0;
-  else base = Math.max(0, Math.trunc(opts.quantity));
-  if (s.maxPerVisit > 0) base = Math.min(base, s.maxPerVisit);
-  return base > 0 ? Math.max(base, Math.floor(base * opts.promoMultiplier)) : 0;
-}
 
 /** Tampons réellement crédités pour un nombre choisi en caisse : plafond par passage puis promo. */
 export function applyPromo(s: StampConfig, count: number, promoMultiplier: number) {
@@ -47,7 +28,6 @@ export function plural(n: number, word: string) {
 }
 
 export function ruleLabel(s: StampConfig) {
-  if (s.rule === "amount") return `1 tampon par tranche de ${formatEuros(s.amountPerStamp * 100)}`;
   if (s.rule === "quantity") return `1 tampon par ${s.unitLabel}`;
   return s.minAmount > 0 ? `1 tampon par commande dès ${formatEuros(s.minAmount * 100)}` : "1 tampon par passage";
 }

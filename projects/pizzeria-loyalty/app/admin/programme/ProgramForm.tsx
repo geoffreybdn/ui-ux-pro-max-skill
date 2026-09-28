@@ -31,9 +31,8 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (b: 
 }
 
 const RULES: { value: Settings["stamps"]["rule"]; title: string; text: string }[] = [
-  { value: "visit", title: "1 tampon par passage", text: "Simple : chaque commande donne un tampon (avec un minimum d'achat si vous voulez)." },
-  { value: "amount", title: "1 tampon par tranche de X €", text: "Ex. 1 tampon tous les 10 € : une commande de 25 € donne 2 tampons." },
-  { value: "quantity", title: "1 tampon par produit", text: "L'équipe saisit le nombre de produits (ex. 3 pizzas = 3 tampons)." },
+  { value: "quantity", title: "1 tampon par pizza", text: "L'équipe indique le nombre de pizzas : 3 pizzas = 3 tampons." },
+  { value: "visit", title: "1 tampon par passage", text: "Un tampon par commande, quel que soit le nombre de pizzas." },
 ];
 
 export function ProgramForm({ initial, info }: { initial: Settings; info: Info }) {
@@ -116,11 +115,8 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
           {s.stamps.rule === "visit" && (
             <Num label="Commande minimum" hint="(0 = aucune)" value={s.stamps.minAmount} step={0.5} onChange={(v) => setStamp("minAmount", v)} suffix="€" />
           )}
-          {s.stamps.rule === "amount" && (
-            <Num label="1 tampon tous les" value={s.stamps.amountPerStamp} step={0.5} min={1} onChange={(v) => setStamp("amountPerStamp", v)} suffix="€" />
-          )}
           {s.stamps.rule === "quantity" && (
-            <label>Nom du produit <span className="hint">(au singulier)</span>
+            <label>Produit compté <span className="hint">(au singulier)</span>
               <input className="input" value={s.stamps.unitLabel} onChange={(e) => setStamp("unitLabel", e.target.value)} placeholder="pizza" />
             </label>
           )}

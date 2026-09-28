@@ -9,7 +9,7 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 | Réglage | Options |
 |---|---|
 | **La carte** | nombre de tampons (2 à 50), récompense (ex. « Pizza offerte ») |
-| **Règle de gain** | 1 tampon par passage (avec commande minimum) · 1 tampon par tranche de X € · 1 tampon par produit (l'équipe saisit la quantité) |
+| **Règle de gain** | **1 tampon par pizza** (par défaut : l'équipe indique le nombre de pizzas) · ou 1 tampon par passage |
 | **Plafond** | maximum de tampons par passage (optionnel) |
 | **Tampons offerts** | à l'inscription, le jour de l'anniversaire (une fois par an), parrainage parrain / filleul, codes boutique |
 | **Promotions** | tampons doublés / triplés sur une période, annoncés par notification |

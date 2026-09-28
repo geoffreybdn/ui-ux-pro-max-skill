@@ -3,7 +3,7 @@ import { sql } from "./db";
 import type { StampRule } from "./program";
 
 export type { StampRule };
-export { computeStamps, applyPromo, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
+export { applyPromo, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
 
 export const NOTIFICATION_KEYS = ["welcome", "visit", "stampNear", "stampComplete", "birthday", "referral", "inactivity", "promo"] as const;
 export type NotificationKey = (typeof NOTIFICATION_KEYS)[number];
@@ -16,7 +16,6 @@ export type Settings = {
     reward: string;
     rule: StampRule;
     minAmount: number;
-    amountPerStamp: number;
     unitLabel: string;
     maxPerVisit: number;
   };
@@ -42,7 +41,7 @@ export const NOTIFICATION_INFO: Record<NotificationKey, { label: string; when: s
 
 export const DEFAULT_SETTINGS: Settings = {
   pizzeriaName: process.env.NEXT_PUBLIC_PIZZERIA_NAME || "La Bella Pizza",
-  stamps: { required: 10, reward: "Pizza offerte", rule: "visit", minAmount: 10, amountPerStamp: 10, unitLabel: "pizza", maxPerVisit: 0 },
+  stamps: { required: 10, reward: "Pizza offerte", rule: "quantity", minAmount: 0, unitLabel: "pizza", maxPerVisit: 0 },
   welcomeStamps: 1,
   birthdayStamps: 2,
   referral: { enabled: true, referrerStamps: 2, refereeStamps: 1 },
@@ -89,9 +88,9 @@ export function normalizeSettings(raw: unknown): Settings {
     stamps: {
       required: int(st.required, d.stamps.required, 2, 50),
       reward: str(st.reward, d.stamps.reward, 60).trim() || d.stamps.reward,
-      rule: ["visit", "amount", "quantity"].includes(st.rule) ? st.rule : d.stamps.rule,
+      // L'ancienne règle « par tranche d'euros » bascule sur « par pizza »
+      rule: st.rule === "visit" ? "visit" : "quantity",
       minAmount: num(st.minAmount, d.stamps.minAmount, 0, 500),
-      amountPerStamp: num(st.amountPerStamp, d.stamps.amountPerStamp, 1, 500),
       unitLabel: str(st.unitLabel, d.stamps.unitLabel, 30).trim() || d.stamps.unitLabel,
       maxPerVisit: int(st.maxPerVisit, d.stamps.maxPerVisit, 0, 50),
     },
