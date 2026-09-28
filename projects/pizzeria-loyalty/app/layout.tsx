@@ -7,7 +7,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: `${pizzeriaName} — Fidélité`, template: `%s · ${pizzeriaName}` },
     description: "Cumulez des tampons à chaque visite et profitez de nos promotions.",
-    icons: { icon: "/favicon.png", apple: "/apple-touch-icon.png" },
+    icons: {
+      icon: [{ url: "/app-icons/alabella-favicon-64.png", type: "image/png", sizes: "64x64" }],
+      apple: [{ url: "/app-icons/alabella-apple-180.png", sizes: "180x180" }],
+    },
     appleWebApp: { capable: true, title: pizzeriaName, statusBarStyle: "default" },
   };
 }

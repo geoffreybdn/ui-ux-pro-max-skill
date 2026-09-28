@@ -18,13 +18,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     background_color: "#f5ecd8",
     theme_color: "#dc2626",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/app-icons/alabella-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/app-icons/alabella-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/app-icons/alabella-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Ma carte", url: "/carte", icons: [{ src: "/icon-192.png", sizes: "192x192" }] },
-      { name: "Scanner (équipe)", url: "/admin/scanner", icons: [{ src: "/icon-192.png", sizes: "192x192" }] },
+      { name: "Ma carte", url: "/carte", icons: [{ src: "/app-icons/alabella-192.png", sizes: "192x192" }] },
+      { name: "Scanner (équipe)", url: "/admin/scanner", icons: [{ src: "/app-icons/alabella-192.png", sizes: "192x192" }] },
     ],
   };
 }

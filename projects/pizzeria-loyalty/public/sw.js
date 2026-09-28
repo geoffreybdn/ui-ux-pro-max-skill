@@ -1,9 +1,9 @@
 // Service worker : notifications push + carte disponible hors connexion
-const CACHE = "pz-card-v2";
+const CACHE = "pz-card-v3";
 const OFFLINE_PAGES = ["/carte"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/logo.png", "/icon-192.png"])).catch(() => {}));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/logo.png", "/app-icons/alabella-192.png"])).catch(() => {}));
   self.skipWaiting();
 });
 
@@ -53,8 +53,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Pizzeria", {
       body: data.body || "",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/app-icons/alabella-192.png",
+      badge: "/app-icons/alabella-192.png",
       tag: data.tag,
       data: { url: data.url || "/carte" },
     })
