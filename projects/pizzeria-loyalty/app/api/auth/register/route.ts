@@ -8,6 +8,13 @@ import { claimLegacyPoints, creditBonus, generateCardCode, parseCardCode } from 
 import { notify } from "@/lib/notify";
 import { firstName, getSettings } from "@/lib/settings";
 
+function detectDevice(ua: string) {
+  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+  if (/android/i.test(ua)) return "android";
+  if (/mobile/i.test(ua)) return "autre";
+  return ua ? "ordinateur" : "autre";
+}
+
 function parseBirthdate(v: unknown): string | null {
   const s = String(v || "").trim();
   if (!s) return null;
@@ -25,6 +32,8 @@ export const POST = handle(async (req: Request) => {
   const password = String(body.password || "");
   const code = String(body.signupCode || "").trim().toUpperCase();
   const birthdate = parseBirthdate(body.birthdate);
+  const src = ["qr", "social"].includes(String(body.src)) ? String(body.src) : "web";
+  const device = detectDevice(req.headers.get("user-agent") || "");
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad("Adresse e-mail invalide");
   if (name.length < 2) bad("Indiquez votre prénom");
@@ -58,8 +67,9 @@ export const POST = handle(async (req: Request) => {
   for (let attempt = 0; attempt < 3 && !customer; attempt++) {
     try {
       [customer] = await sql<{ id: number }>`
-        insert into customers (email, name, phone, password_hash, role, card_code, birthdate, referred_by)
-        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()}, ${birthdate}, ${referrer?.id ?? null})
+        insert into customers (email, name, phone, password_hash, role, card_code, birthdate, referred_by, signup_source, signup_device)
+        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()}, ${birthdate}, ${referrer?.id ?? null},
+                ${referrer ? "parrainage" : signupCode ? "code" : src}, ${device})
         returning id`;
     } catch (err) {
       // collision (très improbable) sur card_code : on retente ; e-mail en double : on arrête
@@ -98,6 +108,7 @@ export const POST = handle(async (req: Request) => {
 
   // Récupération automatique des points de l'ancienne carte (import CSV)
   const [legacy] = await claimLegacyPoints([email]);
+  if (legacy && !referrer && !signupCode) await sql`update customers set signup_source = 'ancienne_carte' where id = ${customer.id}`;
 
   await createSession(customer.id);
   return NextResponse.json({ ok: true, bonus, legacyPoints: legacy?.credited ?? 0 });

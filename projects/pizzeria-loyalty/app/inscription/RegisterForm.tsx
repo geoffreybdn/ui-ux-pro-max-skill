@@ -15,7 +15,7 @@ export function RegisterForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const form = Object.fromEntries(new FormData(e.currentTarget));
+    const form = { ...Object.fromEntries(new FormData(e.currentTarget)), src: params.get("src") ?? "" };
     try {
       const res = await api<{ bonus: number; legacyPoints: number }>("/api/auth/register", { body: form });
       const q = new URLSearchParams({ bienvenue: "1" });

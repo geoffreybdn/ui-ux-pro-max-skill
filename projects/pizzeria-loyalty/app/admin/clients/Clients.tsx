@@ -7,8 +7,8 @@ import type { Customer } from "@/lib/db";
 
 const ROLE_LABEL = { customer: "Client", staff: "Équipe (scanner)", admin: "Admin" } as const;
 
-export function Clients() {
-  const [q, setQ] = useState("");
+export function Clients({ initialQuery = "" }: { initialQuery?: string }) {
+  const [q, setQ] = useState(initialQuery);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [error, setError] = useState("");
 
@@ -16,7 +16,7 @@ export function Clients() {
     api<{ customers: Customer[] }>(`/api/admin/customers?q=${encodeURIComponent(query)}`)
       .then((r) => setCustomers(r.customers))
       .catch((e) => setError(e.message));
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(initialQuery); }, [initialQuery]);
 
   async function setRole(c: Customer, role: string) {
     setError("");

@@ -117,3 +117,9 @@ alter table transactions drop constraint if exists transactions_type_check;
 alter table transactions add constraint transactions_type_check check (type in (
   'earn', 'redeem', 'bonus', 'import', 'adjust', 'welcome', 'birthday', 'referral', 'stamp_reward', 'cashback_use'
 ));
+
+-- ─── v3 : tableau de bord (origine des inscriptions, appareil) ───
+alter table customers add column if not exists signup_source text;
+alter table customers add column if not exists signup_device text;
+create index if not exists transactions_created_idx on transactions (created_at desc);
+create index if not exists customers_created_idx on customers (created_at desc);
