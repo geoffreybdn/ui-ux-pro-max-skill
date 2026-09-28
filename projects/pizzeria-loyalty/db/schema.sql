@@ -123,3 +123,37 @@ alter table customers add column if not exists signup_source text;
 alter table customers add column if not exists signup_device text;
 create index if not exists transactions_created_idx on transactions (created_at desc);
 create index if not exists customers_created_idx on customers (created_at desc);
+
+-- ─── v4 : codes promo (1 achetée = 1 offerte, remises, produit offert, tampons bonus…) ───
+create table if not exists coupons (
+  id                serial primary key,
+  code              text unique not null,
+  title             text not null,
+  kind              text not null check (kind in ('bogo', 'percent', 'amount', 'free_item', 'stamps', 'custom')),
+  value             numeric(8, 2) not null default 0,
+  buy_qty           integer not null default 1,
+  get_qty           integer not null default 1,
+  item              text not null default 'pizza',
+  min_amount        numeric(8, 2) not null default 0,
+  conditions        text,
+  once_per_customer boolean not null default true,
+  max_uses          integer,
+  uses              integer not null default 0,
+  valid_days        integer[],               -- 1 = lundi … 7 = dimanche ; null = tous les jours
+  starts_at         timestamptz not null default now(),
+  ends_at           timestamptz,
+  active            boolean not null default true,
+  show_in_app       boolean not null default true,
+  created_at        timestamptz not null default now()
+);
+
+create table if not exists coupon_redemptions (
+  id          serial primary key,
+  coupon_id   integer not null references coupons(id) on delete cascade,
+  customer_id integer references customers(id) on delete set null,
+  staff_id    integer references customers(id) on delete set null,
+  -- renseigné uniquement pour les codes « 1 utilisation par client » : garantit l'unicité même en cas de double clic
+  once_key    text unique,
+  created_at  timestamptz not null default now()
+);
+create index if not exists coupon_redemptions_customer_idx on coupon_redemptions (customer_id);

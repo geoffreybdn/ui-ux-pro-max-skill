@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import Link from "next/link";
-import { Cake, Flame, Gift, PartyPopper, Stamp, Users } from "lucide-react";
+import { Cake, Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { PushToggle } from "@/components/PushToggle";
 import { InstallCard } from "@/components/InstallCard";
@@ -9,6 +9,8 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { getActivePromotion } from "@/lib/loyalty";
+import { getCustomerOffers } from "@/lib/coupons";
+import { couponBenefit, couponConditions } from "@/lib/program";
 import { cardState, firstName, getSettings, plural, ruleLabel, stampCols } from "@/lib/settings";
 
 export const metadata = { title: "Ma carte" };
@@ -29,9 +31,10 @@ type Tx = { id: number; type: string; stamps: number; note: string | null; creat
 export default async function CardPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const [s, promo, history] = await Promise.all([
+  const [s, promo, offers, history] = await Promise.all([
     getSettings(),
     getActivePromotion(),
+    getCustomerOffers(user.id),
     sql<Tx>`
       select id, type, stamps, note, created_at from transactions
       where customer_id = ${user.id} and stamps <> 0 order by created_at desc limit 15`,
@@ -96,6 +99,23 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
           <p className="center" style={{ margin: 0 }}>
             Encore <b>{plural(st.remaining, "tampon")}</b> pour : <b>{s.stamps.reward}</b>
           </p>
+        )}
+
+        {offers.length > 0 && (
+          <section className="card stack" aria-label="Mes offres">
+            <h2 style={{ margin: 0 }}><Ticket size={20} style={{ verticalAlign: "-3px" }} /> Mes offres</h2>
+            <p className="small muted" style={{ margin: 0 }}>Montrez le code en caisse avec votre carte.</p>
+            {[...offers].sort((a, b) => Number(a.used) - Number(b.used)).map((o) => (
+              <div key={o.id} className={`offer ${o.used ? "is-used" : ""}`}>
+                <div className="coupon-code">{o.code}</div>
+                <div>
+                  <b>{o.title}</b>
+                  <div className="small">{couponBenefit(o)}</div>
+                  <div className="small muted">{o.used ? "Déjà utilisé" : couponConditions(o)}</div>
+                </div>
+              </div>
+            ))}
+          </section>
         )}
 
         <InstallCard force={Boolean(params.bienvenue)} />

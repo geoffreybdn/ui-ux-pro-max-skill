@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, Flame, KeyRound, Stamp, LayoutDashboard, LogOut, Menu, QrCode, ScanLine, Search,
-  ShieldCheck, Upload, Users, WalletCards, X,
+  ShieldCheck, Ticket, Upload, Users, WalletCards, X,
 } from "lucide-react";
 
 const NAV = [
@@ -16,7 +16,8 @@ const NAV = [
   { href: "/admin/promotions", label: "Campagnes", icon: Flame, admin: true },
   { href: "/admin/notifications", label: "Notifications push", icon: Bell, admin: true },
   { href: "/admin/affiche", label: "QR d'inscription", icon: QrCode, admin: true },
-  { href: "/admin/codes", label: "Codes promo", icon: KeyRound, admin: true },
+  { href: "/admin/offres", label: "Codes promo", icon: Ticket, admin: true },
+  { href: "/admin/codes", label: "Codes d'inscription", icon: KeyRound, admin: true },
   { href: "/admin/import", label: "Import CSV", icon: Upload, admin: true },
   { href: "/admin/equipe", label: "Utilisateurs", icon: ShieldCheck, admin: true },
 ];

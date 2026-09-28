@@ -13,6 +13,7 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 | **Plafond** | maximum de tampons par passage (optionnel) |
 | **Tampons offerts** | à l'inscription, le jour de l'anniversaire (une fois par an), parrainage parrain / filleul, codes boutique |
 | **Promotions** | tampons doublés / triplés sur une période, annoncés par notification |
+| **Codes promo** | « X achetée(s) = Y offerte(s) », réduction en % ou en €, produit offert, tampons bonus, offre libre ; **1 utilisation par client (case à cocher)** ou illimitée, maximum total, jours de la semaine, dates, commande minimum, conditions ; visibles dans l'app client et annoncés par notification |
 | **Notifications** | chacune activable et modifiable, seuil « récompense proche », délai de relance |
 
 Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil (anniversaire),
@@ -20,7 +21,7 @@ installation sur l'écran d'accueil, accès hors connexion.
 
 Côté équipe : scanner caméra, **ajouter ou retirer** des tampons (boutons rapides +1 à +5, sélecteur − / +,
 saisie manuelle ; promo et plafond appliqués automatiquement, chaque retrait tracé avec son auteur et un motif),
-bouton « Offrir la récompense », plusieurs admins / employés, tableau de bord (tampons distribués, cadeaux offerts,
+vérification / validation des **codes promo** (avec ou sans carte client), bouton « Offrir la récompense », plusieurs admins / employés, tableau de bord (tampons distribués, cadeaux offerts,
 où en sont les cartes, origine des inscriptions…).
 
 ### Notifications automatiques (activables et modifiables une par une)

@@ -543,3 +543,27 @@ details > summary::-webkit-details-marker { display: none; }
   .l-perks b { font-size: .92rem; }
   .l-values { grid-template-columns: 1fr; }
 }
+
+/* Codes promo */
+.day-picks { display: flex; gap: 8px; flex-wrap: wrap; }
+.day-pick {
+  flex-direction: row; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--panel-border, var(--border)); font-weight: 700; text-transform: capitalize;
+}
+.day-pick input { width: 16px; height: 16px; accent-color: #2563eb; }
+.day-pick.is-on { border-color: #2563eb; background: #eff6ff; }
+.coupon-preview, .offer {
+  display: flex; gap: 16px; align-items: center; padding: 16px; border-radius: 16px;
+  border: 2px dashed #e1261c; background: #fff7f2;
+}
+.coupon-code {
+  font-family: ui-monospace, monospace; font-weight: 800; font-size: 1.15rem; letter-spacing: .06em;
+  background: #e1261c; color: #fff; padding: 10px 14px; border-radius: 12px; white-space: nowrap;
+}
+.offer.is-used { opacity: .55; border-color: #94a3b8; background: #f8fafc; }
+.offer.is-used .coupon-code { background: #94a3b8; }
+.coupon-check { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 14px; border: 2px solid; }
+.coupon-check.is-ok { border-color: #16a34a; background: #f0fdf4; }
+.coupon-check.is-ko { border-color: #fca5a5; background: #fef2f2; }
+.stamp-editor-ok { background: #16a34a; border-color: #16a34a; color: #fff; }
+.stamp-editor-ok:hover { background: #15803d; }

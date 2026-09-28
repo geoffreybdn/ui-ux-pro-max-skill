@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, CameraOff, Flame, Gift, Minus, Plus, Search, Stamp, X } from "lucide-react";
 import { api } from "@/components/useApi";
+import { CouponBox } from "@/components/CouponBox";
 import type { Customer } from "@/lib/db";
 import type { Settings } from "@/lib/settings";
 import { applyPromo, cardState, plural, ruleLabel, stampCols } from "@/lib/program";
@@ -145,6 +146,8 @@ export function Scanner({ isAdmin, card, promo }: Props) {
             <button className="btn"><Search size={18} /> Chercher</button>
           </form>
 
+          {results.length === 0 && <CouponBox />}
+
           {results.length > 0 && (
             <div className="card stack">
               {results.map((c) => (
@@ -283,6 +286,13 @@ export function Scanner({ isAdmin, card, promo }: Props) {
                   : `Retirer ${plural(n, "tampon")}`}
             </button>
           </form>
+
+          <CouponBox
+            key={customer.id}
+            customerId={customer.id}
+            customerName={customer.name}
+            onStamps={(balance) => setCustomer((c) => (c ? { ...c, stamps: balance } : c))}
+          />
 
           <div className="row between">
             <button className="btn" onClick={() => { setCustomer(null); setMessage(null); setQuery(""); }}>
