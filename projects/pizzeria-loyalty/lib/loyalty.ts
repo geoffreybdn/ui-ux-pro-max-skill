@@ -1,7 +1,8 @@
 import { randomInt } from "node:crypto";
 import { sql, type Promotion, type Reward } from "./db";
-import { POINTS_PER_EURO } from "./config";
-import { broadcast, pushToCustomer, pushToCustomers } from "./push";
+import { broadcast, pushToCustomer } from "./push";
+import { notify, notifyEach } from "./notify";
+import { computeVisitGain, describeGain, firstName, formatEuros, getSettings, tierFor } from "./settings";
 
 const CARD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I pour la saisie manuelle
 
@@ -30,62 +31,153 @@ export async function getRewards(): Promise<Reward[]> {
   return sql<Reward>`select id, name, cost, active from rewards where active order by cost asc`;
 }
 
-export function computePoints(amountCents: number, extraPoints: number, multiplier: number) {
-  const base = Math.floor((amountCents / 100) * POINTS_PER_EURO) + extraPoints;
-  return Math.max(0, Math.round(base * multiplier));
-}
+/**
+ * Passage en caisse : crédite points, tampons et cashback en une seule écriture,
+ * puis déclenche les notifications automatiques (récompense proche/débloquée, carte tampons, niveau).
+ */
+export async function recordVisit(opts: { customerId: number; amountCents: number; extraPoints?: number; staffId: number }) {
+  const [s, promo, rewards] = await Promise.all([getSettings(), getActivePromotion(), getRewards()]);
+  const [before] = await sql<{ name: string; points: number; stamps: number; lifetime_points: number }>`
+    select name, points, stamps, lifetime_points from customers where id = ${opts.customerId}`;
+  if (!before) throw new Error("Client introuvable");
 
-/** Crédite des points après un achat (applique automatiquement la promo en cours). */
-export async function earnPoints(opts: {
-  customerId: number;
-  amountCents: number;
-  extraPoints?: number;
-  staffId: number;
-  note?: string;
-}) {
-  const promo = await getActivePromotion();
-  const multiplier = promo ? Number(promo.multiplier) : 1;
-  const points = computePoints(opts.amountCents, opts.extraPoints ?? 0, multiplier);
-  if (points <= 0) throw new Error("Aucun point à créditer");
+  const promoMultiplier = promo ? Number(promo.multiplier) : 1;
+  const tier = tierFor(s, before.lifetime_points);
+  const gain = computeVisitGain(s, {
+    amountCents: opts.amountCents,
+    extraPoints: opts.extraPoints ?? 0,
+    promoMultiplier,
+    tierMultiplier: tier?.multiplier ?? 1,
+  });
+  if (!gain.points && !gain.stamps && !gain.cashbackCents) {
+    throw new Error(
+      s.stamps.enabled && !s.points.enabled && !s.cashback.enabled
+        ? `Montant minimum pour un tampon : ${formatEuros(s.stamps.minAmount * 100)}`
+        : "Rien à créditer"
+    );
+  }
 
-  const [row] = await sql<{ points: number; previous: number }>`
+  const [after] = await sql<{ points: number; stamps: number; cashback_cents: number; lifetime_points: number }>`
     with tx as (
-      insert into transactions (customer_id, type, points, amount_cents, multiplier, promotion_id, staff_id, note)
-      values (${opts.customerId}, 'earn', ${points}, ${opts.amountCents}, ${multiplier}, ${promo?.id ?? null},
-              ${opts.staffId}, ${opts.note ?? null})
+      insert into transactions (customer_id, type, points, stamps, cashback_cents, amount_cents, multiplier, promotion_id, staff_id)
+      values (${opts.customerId}, 'earn', ${gain.points}, ${gain.stamps}, ${gain.cashbackCents}, ${opts.amountCents},
+              ${promoMultiplier}, ${promo?.id ?? null}, ${opts.staffId})
       returning customer_id
     )
     update customers c
-       set points = c.points + ${points},
-           lifetime_points = c.lifetime_points + ${points},
+       set points = c.points + ${gain.points},
+           lifetime_points = c.lifetime_points + ${gain.points},
+           stamps = c.stamps + ${gain.stamps},
+           cashback_cents = c.cashback_cents + ${gain.cashbackCents},
            last_visit_at = now()
       from tx where c.id = tx.customer_id
-    returning c.points, c.points - ${points} as previous`;
-  if (!row) throw new Error("Client introuvable");
+    returning c.points, c.stamps, c.cashback_cents, c.lifetime_points`;
 
-  // Notifications automatiques (non bloquantes pour la caisse)
-  const unlocked = (await getRewards()).filter((r) => row.previous < r.cost && row.points >= r.cost);
-  const promoText = promo ? ` (promo x${multiplier} 🔥)` : "";
-  const notifications = [
-    pushToCustomer(opts.customerId, {
-      title: `+${points} points${promoText}`,
-      body: `Merci pour votre visite ! Vous avez maintenant ${row.points} points.`,
-      tag: "points",
+  // ── Notifications automatiques ──
+  const prenom = firstName(before.name);
+  const jobs: Promise<unknown>[] = [
+    notify(opts.customerId, "visit", {
+      prenom,
+      gain: describeGain(gain) + (promo ? ` (promo x${promoMultiplier})` : ""),
+      solde: after.points,
     }),
   ];
-  if (unlocked.length) {
-    notifications.push(
-      pushToCustomer(opts.customerId, {
-        title: "🎁 Récompense débloquée !",
-        body: `Vous pouvez maintenant obtenir : ${unlocked.map((r) => r.name).join(", ")}.`,
-        tag: "reward",
-      })
-    );
-  }
-  await Promise.allSettled(notifications);
 
-  return { points, balance: row.points, multiplier, promotion: promo?.title ?? null };
+  const unlocked = rewards.filter((r) => before.points < r.cost && after.points >= r.cost);
+  if (unlocked.length) {
+    jobs.push(notify(opts.customerId, "reward", { prenom, recompense: unlocked.map((r) => r.name).join(", "), solde: after.points }));
+  } else if (s.nearRewardPoints > 0) {
+    const next = rewards.find((r) => r.cost > after.points);
+    if (next && next.cost - after.points <= s.nearRewardPoints && next.cost - before.points > s.nearRewardPoints) {
+      jobs.push(
+        notify(opts.customerId, "nearReward", { prenom, reste: next.cost - after.points, recompense: next.name, solde: after.points })
+      );
+    }
+  }
+
+  if (gain.stamps) {
+    const req = s.stamps.required;
+    if (before.stamps < req && after.stamps >= req) {
+      jobs.push(notify(opts.customerId, "stampComplete", { prenom, recompense: s.stamps.reward }));
+    } else if (after.stamps === req - 1) {
+      jobs.push(notify(opts.customerId, "stampNear", { prenom, recompense: s.stamps.reward }));
+    }
+  }
+
+  const newTier = tierFor(s, after.lifetime_points);
+  if (tier && newTier && newTier.name !== tier.name) {
+    jobs.push(notify(opts.customerId, "tierUp", { prenom, niveau: newTier.name }));
+  }
+  await Promise.allSettled(jobs);
+
+  return {
+    ...gain,
+    balance: after.points,
+    stampsBalance: after.stamps,
+    cashbackBalance: after.cashback_cents,
+    multiplier: promoMultiplier,
+    tierMultiplier: tier?.multiplier ?? 1,
+    promotion: promo?.title ?? null,
+    summary: describeGain(gain),
+  };
 }
+
+/** Valide la carte tampons complète (retire `required` tampons). */
+export async function redeemStampCard(opts: { customerId: number; staffId: number }) {
+  const s = await getSettings();
+  const req = s.stamps.required;
+  const [row] = await sql<{ stamps: number }>`
+    with upd as (
+      update customers set stamps = stamps - ${req}, last_visit_at = now()
+      where id = ${opts.customerId} and stamps >= ${req}
+      returning id, stamps
+    ), tx as (
+      insert into transactions (customer_id, type, points, stamps, staff_id, note)
+      select id, 'stamp_reward', 0, ${-req}, ${opts.staffId}, ${s.stamps.reward} from upd
+    )
+    select stamps from upd`;
+  if (!row) throw new Error(`Il faut ${req} tampons`);
+  await pushToCustomer(opts.customerId, {
+    title: `${s.stamps.reward} 🍕`,
+    body: "Bon appétit ! Votre nouvelle carte tampons commence.",
+    tag: "stamp",
+  }).catch(() => 0);
+  return { stampsBalance: row.stamps, reward: s.stamps.reward };
+}
+
+/** Utilise tout ou partie du cashback comme réduction. */
+export async function useCashback(opts: { customerId: number; cents: number; staffId: number }) {
+  const s = await getSettings();
+  if (!s.cashback.enabled) throw new Error("Le cashback est désactivé");
+  if (!(opts.cents > 0)) throw new Error("Montant invalide");
+  const min = Math.round(s.cashback.minRedeem * 100);
+  const [row] = await sql<{ cashback_cents: number }>`
+    with upd as (
+      update customers set cashback_cents = cashback_cents - ${opts.cents}
+      where id = ${opts.customerId} and cashback_cents >= ${opts.cents} and cashback_cents >= ${min}
+      returning id, cashback_cents
+    ), tx as (
+      insert into transactions (customer_id, type, points, cashback_cents, staff_id, note)
+      select id, 'cashback_use', 0, ${-opts.cents}, ${opts.staffId}, 'Cashback utilisé' from upd
+    )
+    select cashback_cents from upd`;
+  if (!row) throw new Error(`Solde insuffisant (minimum d'utilisation : ${formatEuros(min)})`);
+  return { cashbackBalance: row.cashback_cents, used: formatEuros(opts.cents) };
+}
+
+/** Crédite un bonus (bienvenue, anniversaire, parrainage…) et renvoie le nouveau solde. */
+export async function creditBonus(customerId: number, type: "welcome" | "birthday" | "referral" | "bonus", points: number, note: string) {
+  if (points <= 0) return null;
+  const [row] = await sql<{ points: number }>`
+    with tx as (
+      insert into transactions (customer_id, type, points, note) values (${customerId}, ${type}, ${points}, ${note})
+      returning customer_id
+    )
+    update customers c set points = c.points + ${points}, lifetime_points = c.lifetime_points + ${points}
+    from tx where c.id = tx.customer_id returning c.points`;
+  return row?.points ?? null;
+}
+
 
 export async function redeemReward(opts: { customerId: number; rewardId: number; staffId: number }) {
   const [reward] = await sql<Reward>`select * from rewards where id = ${opts.rewardId} and active`;
@@ -182,12 +274,15 @@ export async function importLegacyCustomers(rows: LegacyRow[]) {
   return { imported: rows.length, creditedAccounts: credited.length };
 }
 
+
 /** Envoie la notification des promotions qui ont démarré et n'ont pas encore été annoncées. */
 export async function announceStartedPromotions() {
+  const s = await getSettings();
   const promos = await sql<Promotion>`
     update promotions set notified_at = now()
     where active and notified_at is null and starts_at <= now() and ends_at > now()
     returning *`;
+  if (!s.notifications.promo.enabled) return { promotions: promos.length, sent: 0 };
   let sent = 0;
   for (const p of promos) {
     const until = new Date(p.ends_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -203,25 +298,56 @@ export async function announceStartedPromotions() {
   return { promotions: promos.length, sent };
 }
 
-/** Relance les clients qui ne sont pas venus depuis `days` jours (au plus une fois par période). */
-export async function remindInactiveCustomers(days: number) {
-  const inactive = await sql<{ id: number }>`
+/** Relance les clients qui ne sont pas venus depuis X jours (au plus une fois par période). */
+export async function remindInactiveCustomers() {
+  const s = await getSettings();
+  const days = s.inactivityDays;
+  if (!s.notifications.inactivity.enabled) return { customers: 0, sent: 0 };
+  const inactive = await sql<{ id: number; name: string; points: number }>`
     update customers set last_reminder_at = now()
     where role = 'customer'
       and coalesce(last_visit_at, created_at) < now() - make_interval(days => ${days})
       and (last_reminder_at is null or last_reminder_at < now() - make_interval(days => ${days}))
       and exists (select 1 from push_subscriptions s where s.customer_id = customers.id)
-    returning id`;
-  const promo = await getActivePromotion();
-  const sent = await pushToCustomers(
-    inactive.map((c) => c.id),
-    {
-      title: "Vous nous manquez ! 🍕",
-      body: promo
-        ? `${promo.title} : vos points sont multipliés par ${Number(promo.multiplier)} en ce moment.`
-        : "Passez nous voir, votre carte de fidélité vous attend.",
-      tag: "reminder",
-    }
+    returning id, name, points`;
+  const sent = await notifyEach(
+    "inactivity",
+    inactive.map((c) => ({ id: c.id, vars: { prenom: firstName(c.name), solde: c.points } }))
   );
   return { customers: inactive.length, sent };
+}
+
+/**
+ * Anniversaires du jour (heure de Paris) : bonus crédité une fois par an + notification.
+ * Les clients nés un 29 février sont fêtés le 28 février les années non bissextiles.
+ */
+export async function celebrateBirthdays() {
+  const s = await getSettings();
+  const bonus = s.birthdayBonus;
+  const rows = await sql<{ id: number; name: string; points: number }>`
+    with today as (select (now() at time zone 'Europe/Paris')::date as d),
+    b as (
+      update customers c
+         set last_birthday_year = extract(year from t.d)::int,
+             points = c.points + ${bonus},
+             lifetime_points = c.lifetime_points + ${bonus}
+        from today t
+       where c.birthdate is not null
+         and coalesce(c.last_birthday_year, 0) < extract(year from t.d)
+         and (
+           to_char(c.birthdate, 'MM-DD') = to_char(t.d, 'MM-DD')
+           or (to_char(c.birthdate, 'MM-DD') = '02-29' and to_char(t.d, 'MM-DD') = '02-28'
+               and extract(day from date_trunc('year', t.d) + interval '1 month 28 days') <> 29)
+         )
+      returning c.id, c.name, c.points
+    ), tx as (
+      insert into transactions (customer_id, type, points, note)
+      select id, 'birthday', ${bonus}, 'Cadeau d''anniversaire' from b where ${bonus} > 0
+    )
+    select * from b`;
+  const sent = await notifyEach(
+    "birthday",
+    rows.map((c) => ({ id: c.id, vars: { prenom: firstName(c.name), bonus, solde: c.points } }))
+  );
+  return { customers: rows.length, sent };
 }

@@ -4,22 +4,28 @@ Application web (PWA) de carte de fidélité pour pizzeria, prête pour **Vercel
 
 ## Fonctionnalités
 
-| Côté client | Côté admin / équipe |
-|---|---|
-| Inscription e-mail + mot de passe, **code d'inscription** facultatif (points offerts) | **Scanner** le QR code de la carte avec la caméra (ou recherche nom / e-mail / tél.) |
-| Carte de fidélité avec **QR code**, solde, progression vers la prochaine récompense | Crédit des points selon le montant (1 pt / € configurable) + bonus |
-| **Notifications push** (Android, ordinateur, iPhone une fois l'app ajoutée à l'écran d'accueil) | **Promotions double / triple points** appliquées automatiquement et notifiées |
-| Historique des points | **Codes d'inscription** (bonus, nombre max d'utilisations, expiration, lien à partager) |
-| Récupération automatique des **points de l'ancienne carte** | **Import CSV** des anciens clients et de leurs points |
-| **Carte sur l'écran d'accueil** (bouton sur Android, mode d'emploi pas à pas sur iPhone) | **Plusieurs administrateurs et employés** (page *Équipe*), tous peuvent scanner |
-| Carte consultable **hors connexion** (QR toujours affiché en caisse) | Récompenses, message push manuel, suivi « qui a scanné » |
+Tout le programme se règle depuis **Admin → Programme** (sans redéployer) :
 
-### Notifications automatiques
-- `+X points` après chaque passage en caisse (avec mention de la promo en cours)
-- Récompense débloquée
-- Démarrage d'une promotion (immédiat si elle commence tout de suite, sinon au démarrage)
-- Anciens points récupérés (quand l'import concerne un client déjà inscrit)
-- Relance des clients inactifs depuis `INACTIVITY_REMINDER_DAYS` jours (cron quotidien)
+| Mécanique | Réglages |
+|---|---|
+| **Points** | points par euro, récompenses échangeables (Admin → Récompenses), alerte « récompense proche » |
+| **Carte à tampons** | nombre de tampons, commande minimum, récompense (1 tampon/commande, 2 pendant une promo x2) |
+| **Cashback** | % reversé dans une cagnotte en €, montant minimum pour l'utiliser en caisse |
+| **Niveaux VIP** | jusqu'à 5 niveaux (Bronze → Argent → Or…) selon les points cumulés, avec multiplicateur de gains |
+| **Bonus** | bienvenue à l'inscription, anniversaire (une fois par an), parrainage parrain / filleul |
+| **Promotions** | double / triple gains sur une période (points, tampons, cashback), annoncées par notification |
+| **Codes d'inscription** | points offerts avec un code boutique (limite d'utilisations, expiration) |
+
+Côté client : carte avec QR code, solde de points, grille de tampons, cagnotte cashback, niveau et progression,
+lien de parrainage, historique, profil (date de naissance), installation sur l'écran d'accueil, accès hors connexion.
+
+Côté équipe : scanner caméra, enregistrement du passage (aperçu du gain avant validation), carte tampons,
+cashback, récompenses, plusieurs admins / employés, tableau de bord.
+
+### Notifications automatiques (activables et modifiables une par une)
+Bienvenue · passage en caisse · récompense proche · récompense débloquée · dernier tampon · carte tampons complète ·
+nouveau niveau · anniversaire · parrainage réussi · relance d'inactivité · démarrage d'une promotion.
+Les messages acceptent des variables : `{prenom}`, `{solde}`, `{gain}`, `{recompense}`, `{reste}`, `{bonus}`, `{niveau}`, `{filleul}`.
 
 ### Import CSV des anciens clients
 Colonnes obligatoires `email` et `points`, facultatives `nom` et `telephone` (séparateur `;` ou `,`, UTF-8 ou export Excel).
@@ -50,8 +56,7 @@ Colonnes obligatoires `email` et `points`, facultatives `nom` et `telephone` (s�
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | sortie de `npm run vapid` |
    | `VAPID_SUBJECT` | `mailto:patron@mapizzeria.fr` |
    | `CRON_SECRET` | chaîne aléatoire |
-   | `NEXT_PUBLIC_PIZZERIA_NAME` | `La Bella Pizza` |
-   | `POINTS_PER_EURO` | `1` |
+   | `NEXT_PUBLIC_PIZZERIA_NAME` | `La Bella Pizza` (valeur initiale, modifiable ensuite dans Admin → Programme) |
 
 6. Redéployer, puis **inscrivez-vous avec l'e-mail de `ADMIN_EMAILS`** : ce compte devient administrateur
    (`ADMIN_EMAILS` accepte plusieurs e-mails séparés par des virgules).
@@ -67,7 +72,7 @@ L'app est une PWA : sur Android/Chrome un bouton **Ajouter à l'écran d'accueil
 iPhone, les étapes Safari (Partager → *Sur l'écran d'accueil*) sont affichées. Une fois installée, la carte
 s'ouvre en plein écran, fonctionne hors connexion et peut recevoir les notifications (obligatoire sur iPhone).
 
-Le cron (`vercel.json`) tourne une fois par jour (compatible plan Hobby). Les promos programmées
+Le cron (`vercel.json`) tourne une fois par jour (anniversaires, relances, promos programmées) (compatible plan Hobby). Les promos programmées
 sont aussi annoncées dès qu'un admin ouvre le tableau de bord.
 
 ## Développement local

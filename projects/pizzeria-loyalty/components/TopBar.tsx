@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { PIZZERIA_NAME } from "@/lib/config";
+import { getSettings } from "@/lib/settings";
 
-export function TopBar({ loggedIn, children }: { loggedIn?: boolean; children?: React.ReactNode }) {
+export async function TopBar({ loggedIn, children }: { loggedIn?: boolean; children?: React.ReactNode }) {
+  const { pizzeriaName } = await getSettings();
   return (
     <header className="topbar">
       <div className="container">
         <Link href="/" className="brand">
           <img src="/icon.svg" alt="" width={32} height={32} style={{ flex: "none" }} />
-          {PIZZERIA_NAME}
+          {pizzeriaName}
         </Link>
         <div className="row">
           {children}

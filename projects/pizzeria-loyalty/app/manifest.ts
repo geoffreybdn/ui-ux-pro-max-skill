@@ -1,10 +1,13 @@
 import type { MetadataRoute } from "next";
-import { PIZZERIA_NAME } from "@/lib/config";
+import { getSettings } from "@/lib/settings";
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic = "force-dynamic";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const { pizzeriaName } = await getSettings();
   return {
-    name: `${PIZZERIA_NAME} — Fidélité`,
-    short_name: PIZZERIA_NAME,
+    name: `${pizzeriaName} — Fidélité`,
+    short_name: pizzeriaName,
     description: "Votre carte de fidélité, vos points et nos promos.",
     id: "/carte",
     start_url: "/carte",

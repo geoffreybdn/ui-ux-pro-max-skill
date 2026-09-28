@@ -28,6 +28,9 @@ export type Customer = {
   card_code: string;
   points: number;
   lifetime_points: number;
+  stamps: number;
+  cashback_cents: number;
+  birthdate: string | null;
   last_visit_at: string | null;
   created_at: string;
 };

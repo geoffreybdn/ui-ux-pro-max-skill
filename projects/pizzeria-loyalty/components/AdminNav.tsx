@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bell, Flame, Gift, KeyRound, ScanLine, ShieldCheck, Upload, Users } from "lucide-react";
+import { BarChart3, Bell, Flame, SlidersHorizontal, Gift, KeyRound, ScanLine, ShieldCheck, Upload, Users } from "lucide-react";
 
 const LINKS = [
   { href: "/admin", label: "Tableau de bord", icon: BarChart3, admin: true },
   { href: "/admin/scanner", label: "Scanner", icon: ScanLine, admin: false },
   { href: "/admin/clients", label: "Clients", icon: Users, admin: true },
+  { href: "/admin/programme", label: "Programme", icon: SlidersHorizontal, admin: true },
   { href: "/admin/promotions", label: "Promotions", icon: Flame, admin: true },
   { href: "/admin/codes", label: "Codes d'inscription", icon: KeyRound, admin: true },
   { href: "/admin/recompenses", label: "Récompenses", icon: Gift, admin: true },

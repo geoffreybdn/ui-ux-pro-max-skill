@@ -96,3 +96,24 @@ create table if not exists notifications_log (
 insert into rewards (name, cost)
 select * from (values ('Boisson offerte', 50), ('Dessert offert', 80), ('Pizza offerte', 120)) as v(name, cost)
 where not exists (select 1 from rewards);
+
+-- ─── v2 : programme complet (tampons, cashback, niveaux, anniversaire, parrainage) ───
+
+create table if not exists program_settings (
+  id         integer primary key default 1 check (id = 1),
+  data       jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table customers add column if not exists birthdate date;
+alter table customers add column if not exists stamps integer not null default 0;
+alter table customers add column if not exists cashback_cents integer not null default 0;
+alter table customers add column if not exists last_birthday_year integer;
+alter table customers add column if not exists referred_by integer references customers(id) on delete set null;
+
+alter table transactions add column if not exists stamps integer not null default 0;
+alter table transactions add column if not exists cashback_cents integer not null default 0;
+alter table transactions drop constraint if exists transactions_type_check;
+alter table transactions add constraint transactions_type_check check (type in (
+  'earn', 'redeem', 'bonus', 'import', 'adjust', 'welcome', 'birthday', 'referral', 'stamp_reward', 'cashback_use'
+));

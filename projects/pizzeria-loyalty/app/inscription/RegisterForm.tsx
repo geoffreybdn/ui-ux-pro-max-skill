@@ -43,7 +43,11 @@ export function RegisterForm() {
         <input className="input" name="password" type="password" minLength={8} required autoComplete="new-password" />
       </label>
       <label>
-        Code d&apos;inscription <span className="hint">(facultatif — donné en boutique, points offerts)</span>
+        Date de naissance <span className="hint">(facultatif — un cadeau le jour J 🎂)</span>
+        <input className="input" name="birthdate" type="date" max={new Date().toISOString().slice(0, 10)} />
+      </label>
+      <label>
+        Code d&apos;inscription ou de parrainage <span className="hint">(facultatif — code boutique ou code carte d&apos;un ami)</span>
         <input className="input" name="signupCode" defaultValue={params.get("code") ?? ""} style={{ textTransform: "uppercase" }} />
       </label>
       <button className="btn btn-primary btn-block" disabled={loading}>

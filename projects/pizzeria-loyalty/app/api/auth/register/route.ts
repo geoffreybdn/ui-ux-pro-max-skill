@@ -4,7 +4,18 @@ import { sql } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { handle, bad } from "@/lib/api";
 import { adminEmails, normalizeEmail } from "@/lib/config";
-import { claimLegacyPoints, generateCardCode } from "@/lib/loyalty";
+import { claimLegacyPoints, creditBonus, generateCardCode, parseCardCode } from "@/lib/loyalty";
+import { notify } from "@/lib/notify";
+import { firstName, getSettings } from "@/lib/settings";
+
+function parseBirthdate(v: unknown): string | null {
+  const s = String(v || "").trim();
+  if (!s) return null;
+  const d = new Date(`${s}T12:00:00Z`);
+  const year = d.getUTCFullYear();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || isNaN(d.getTime()) || year < 1900 || d > new Date()) bad("Date de naissance invalide");
+  return s;
+}
 
 export const POST = handle(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
@@ -13,6 +24,7 @@ export const POST = handle(async (req: Request) => {
   const phone = String(body.phone || "").trim() || null;
   const password = String(body.password || "");
   const code = String(body.signupCode || "").trim().toUpperCase();
+  const birthdate = parseBirthdate(body.birthdate);
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad("Adresse e-mail invalide");
   if (name.length < 2) bad("Indiquez votre prénom");
@@ -21,14 +33,22 @@ export const POST = handle(async (req: Request) => {
   const [existing] = await sql`select 1 from customers where email = ${email}`;
   if (existing) bad("Un compte existe déjà avec cet e-mail. Connectez-vous.", 409);
 
+  const settings = await getSettings();
+
+  // Le champ « code » accepte un code d'inscription (boutique) ou le code carte d'un ami (parrainage)
   let signupCode: { id: number; bonus_points: number } | undefined;
+  let referrer: { id: number; name: string } | undefined;
   if (code) {
     [signupCode] = await sql<{ id: number; bonus_points: number }>`
       select id, bonus_points from signup_codes
       where code = ${code} and active
         and (expires_at is null or expires_at > now())
         and (max_uses is null or uses < max_uses)`;
-    if (!signupCode) bad("Code d'inscription invalide ou expiré");
+    if (!signupCode && settings.referral.enabled) {
+      [referrer] = await sql<{ id: number; name: string }>`
+        select id, name from customers where card_code = ${parseCardCode(code)}`;
+    }
+    if (!signupCode && !referrer) bad("Code invalide ou expiré");
   }
 
   const role = adminEmails().includes(email) ? "admin" : "customer";
@@ -38,8 +58,8 @@ export const POST = handle(async (req: Request) => {
   for (let attempt = 0; attempt < 3 && !customer; attempt++) {
     try {
       [customer] = await sql<{ id: number }>`
-        insert into customers (email, name, phone, password_hash, role, card_code)
-        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()})
+        insert into customers (email, name, phone, password_hash, role, card_code, birthdate, referred_by)
+        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()}, ${birthdate}, ${referrer?.id ?? null})
         returning id`;
     } catch (err) {
       // collision (très improbable) sur card_code : on retente ; e-mail en double : on arrête
@@ -50,6 +70,11 @@ export const POST = handle(async (req: Request) => {
   if (!customer) bad("Inscription impossible, réessayez", 500);
 
   let bonus = 0;
+  if (settings.welcomeBonus > 0) {
+    await creditBonus(customer.id, "welcome", settings.welcomeBonus, "Cadeau de bienvenue");
+    bonus += settings.welcomeBonus;
+  }
+
   if (signupCode) {
     // Incrément atomique : si le code vient d'atteindre sa limite, pas de bonus.
     const [used] = await sql<{ bonus_points: number }>`
@@ -57,15 +82,17 @@ export const POST = handle(async (req: Request) => {
       where id = ${signupCode.id} and (max_uses is null or uses < max_uses)
       returning bonus_points`;
     if (used) {
-      bonus = used.bonus_points;
-      await sql`
-        with tx as (
-          insert into transactions (customer_id, type, points, note)
-          values (${customer.id}, 'bonus', ${bonus}, ${"Bonus code " + code}) returning customer_id
-        )
-        update customers set points = points + ${bonus}, lifetime_points = lifetime_points + ${bonus},
-               signup_code_id = ${signupCode.id}
-        where id = ${customer.id}`;
+      await sql`update customers set signup_code_id = ${signupCode.id} where id = ${customer.id}`;
+      if (await creditBonus(customer.id, "bonus", used.bonus_points, `Bonus code ${code}`)) bonus += used.bonus_points;
+    }
+  }
+
+  if (referrer) {
+    const { refereeBonus, referrerBonus } = settings.referral;
+    if (await creditBonus(customer.id, "referral", refereeBonus, `Parrainé par ${referrer.name}`)) bonus += refereeBonus;
+    if (referrerBonus > 0) {
+      await creditBonus(referrer.id, "referral", referrerBonus, `Parrainage de ${name}`);
+      await notify(referrer.id, "referral", { prenom: firstName(referrer.name), filleul: firstName(name), bonus: referrerBonus });
     }
   }
 

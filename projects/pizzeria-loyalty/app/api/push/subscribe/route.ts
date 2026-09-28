@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { handle, bad } from "@/lib/api";
-import { pushToCustomer } from "@/lib/push";
-import { PIZZERIA_NAME } from "@/lib/config";
+import { notify } from "@/lib/notify";
+import { firstName } from "@/lib/settings";
 
 export const POST = handle(async (req: Request) => {
   const user = await getCurrentUser();
@@ -21,10 +21,9 @@ export const POST = handle(async (req: Request) => {
     returning (xmax = 0) as inserted`;
 
   if (row?.inserted) {
-    await pushToCustomer(user.id, {
-      title: `Notifications activées ✅`,
-      body: `Vous serez prévenu des promos et de vos points chez ${PIZZERIA_NAME}.`,
-    }).catch(() => 0);
+    // Premier appareil abonné : message de bienvenue (modifiable dans Admin → Programme)
+    const [{ n }] = await sql<{ n: number }>`select count(*)::int as n from push_subscriptions where customer_id = ${user.id}`;
+    if (n === 1) await notify(user.id, "welcome", { prenom: firstName(user.name), solde: user.points });
   }
   return NextResponse.json({ ok: true });
 });

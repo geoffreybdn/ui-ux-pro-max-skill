@@ -31,14 +31,11 @@ export function Notifications() {
     <div className="stack">
       <h1>Notifications</h1>
       <div className="card small">
-        <b>Envoyées automatiquement :</b>
-        <ul style={{ margin: "8px 0 0" }}>
-          <li>Points crédités après chaque passage en caisse</li>
-          <li>Récompense débloquée</li>
-          <li>Démarrage d&apos;une promotion (double points…)</li>
-          <li>Anciens points récupérés après l&apos;import CSV</li>
-          <li>Relance des clients inactifs (une fois par jour, via le cron Vercel)</li>
-        </ul>
+        <b>Notifications automatiques</b> : bienvenue, passage en caisse, récompense proche / débloquée, dernier tampon,
+        carte tampons complète, nouveau niveau, anniversaire, parrainage, relance d&apos;inactivité et promotions.
+        <div style={{ marginTop: 8 }}>
+          <a className="btn btn-sm" href="/admin/programme#notifications">Activer / modifier les messages automatiques</a>
+        </div>
       </div>
       <form className="card stack" onSubmit={submit}>
         <h2>Message manuel</h2>

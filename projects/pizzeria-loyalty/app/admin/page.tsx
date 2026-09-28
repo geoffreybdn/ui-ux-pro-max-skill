@@ -3,6 +3,7 @@ import { Flame, ScanLine } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { announceStartedPromotions, getActivePromotion } from "@/lib/loyalty";
+import { formatEuros, getSettings } from "@/lib/settings";
 
 export const metadata = { title: "Admin" };
 
@@ -10,15 +11,23 @@ export default async function Dashboard() {
   await requireAdminPage();
   // Rattrapage : annonce une promo programmée qui a démarré depuis le dernier cron
   await announceStartedPromotions().catch(() => null);
+  const settings = await getSettings();
 
   const [[stats], promo, recent] = await Promise.all([
-    sql<{ customers: number; subscribers: number; points: number; visits_week: number; legacy_pending: number }>`
+    sql<{ customers: number; subscribers: number; points: number; visits_week: number; legacy_pending: number; cashback: number; full_cards: number; birthdays_week: number; referrals: number }>`
       select
         (select count(*)::int from customers where role = 'customer') as customers,
         (select count(distinct customer_id)::int from push_subscriptions) as subscribers,
         (select coalesce(sum(points), 0)::int from customers) as points,
         (select count(*)::int from transactions where type = 'earn' and created_at > now() - interval '7 days') as visits_week,
-        (select count(*)::int from legacy_customers where claimed_by is null) as legacy_pending`,
+        (select count(*)::int from legacy_customers where claimed_by is null) as legacy_pending,
+        (select coalesce(sum(cashback_cents), 0)::int from customers) as cashback,
+        (select count(*)::int from customers where stamps >= ${settings.stamps.required}) as full_cards,
+        (select count(*)::int from customers where birthdate is not null
+           and (make_date(2000, extract(month from birthdate)::int, extract(day from birthdate)::int)
+                - make_date(2000, extract(month from now())::int, extract(day from now())::int) + 366) % 366 < 7
+        ) as birthdays_week,
+        (select count(*)::int from customers where referred_by is not null) as referrals`,
     getActivePromotion(),
     sql<{ id: number; name: string; type: string; points: number; created_at: string; staff: string | null }>`
       select t.id, c.name, t.type, t.points, t.created_at, s.name as staff
@@ -49,6 +58,10 @@ export default async function Dashboard() {
         <div className="card stat"><div className="value">{stats.visits_week}</div><div className="label">Passages (7 jours)</div></div>
         <div className="card stat"><div className="value">{stats.points}</div><div className="label">Points en circulation</div></div>
         <div className="card stat"><div className="value">{stats.legacy_pending}</div><div className="label">Anciens clients pas encore inscrits</div></div>
+        {settings.stamps.enabled && <div className="card stat"><div className="value">{stats.full_cards}</div><div className="label">Cartes tampons complètes</div></div>}
+        {settings.cashback.enabled && <div className="card stat"><div className="value">{formatEuros(stats.cashback)}</div><div className="label">Cashback en cagnotte</div></div>}
+        <div className="card stat"><div className="value">{stats.birthdays_week}</div><div className="label">Anniversaires dans les 7 jours</div></div>
+        {settings.referral.enabled && <div className="card stat"><div className="value">{stats.referrals}</div><div className="label">Clients parrainés</div></div>}
       </div>
 
       <section className="card">

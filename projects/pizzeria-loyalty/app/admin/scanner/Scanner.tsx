@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, Flame, Search, X } from "lucide-react";
+import { Camera, CameraOff, Coins, Crown, Flame, Search, Stamp, X } from "lucide-react";
 import { api } from "@/components/useApi";
 import type { Customer, Reward } from "@/lib/db";
+import type { Settings } from "@/lib/settings";
+import { computeVisitGain, describeGain, formatEuros, tierFor } from "@/lib/program";
+
+type Program = Pick<Settings, "points" | "stamps" | "cashback" | "tiers">;
 
 type Props = {
   isAdmin: boolean;
-  pointsPerEuro: number;
+  program: Program;
   promo: { title: string; multiplier: number } | null;
   rewards: Reward[];
 };
 
 type Html5Qrcode = import("html5-qrcode").Html5Qrcode;
 
-export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
+export function Scanner({ isAdmin, program, promo, rewards }: Props) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [results, setResults] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
@@ -22,12 +26,20 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [amount, setAmount] = useState("");
   const [extra, setExtra] = useState("");
+  const [cashbackAmount, setCashbackAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  const multiplier = promo?.multiplier ?? 1;
-  const amountNum = Number(amount.replace(",", ".")) || 0;
-  const preview = Math.max(0, Math.round((Math.floor(amountNum * pointsPerEuro) + (Number(extra) || 0)) * multiplier));
+  const promoMultiplier = promo?.multiplier ?? 1;
+  const tier = customer ? tierFor(program, customer.lifetime_points) : null;
+  const amountCents = Math.round((Number(amount.replace(",", ".")) || 0) * 100);
+  const preview = computeVisitGain(program, {
+    amountCents,
+    extraPoints: Number(extra) || 0,
+    promoMultiplier,
+    tierMultiplier: tier?.multiplier ?? 1,
+  });
+  const previewText = describeGain(preview);
 
   const lookup = useCallback(async (q: string) => {
     setMessage(null);
@@ -86,10 +98,18 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
       const res = await api<Record<string, unknown>>("/api/admin/transactions", {
         body: { customerId: customer.id, ...body },
       });
-      setCustomer({ ...customer, points: Number(res.balance) });
+      const gained = body.action === "earn" ? Number(res.points ?? 0) : 0;
+      setCustomer({
+        ...customer,
+        points: res.balance !== undefined ? Number(res.balance) : customer.points,
+        lifetime_points: customer.lifetime_points + gained,
+        stamps: res.stampsBalance !== undefined ? Number(res.stampsBalance) : customer.stamps,
+        cashback_cents: res.cashbackBalance !== undefined ? Number(res.cashbackBalance) : customer.cashback_cents,
+      });
       setMessage({ kind: "success", text: success(res) });
       setAmount("");
       setExtra("");
+      setCashbackAmount("");
     } catch (err) {
       setMessage({ kind: "error", text: (err as Error).message });
     } finally {
@@ -104,11 +124,13 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
     act({ action: "adjust", points: Number(value), note }, (r) => `Solde corrigé : ${r.balance} points`);
   }
 
+  const stampsOnCard = customer ? Math.min(customer.stamps, program.stamps.required) : 0;
+
   return (
     <div className="stack" style={{ maxWidth: 560, margin: "0 auto" }}>
       <h1>Scanner une carte</h1>
       {promo && (
-        <div className="promo-banner"><Flame size={20} /> {promo.title} : points x{promo.multiplier} appliqués automatiquement</div>
+        <div className="promo-banner"><Flame size={20} /> {promo.title} : gains x{promo.multiplier} appliqués automatiquement</div>
       )}
 
       {!customer && (
@@ -157,13 +179,22 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
 
       {customer && (
         <>
-          <div className="card row between">
-            <div>
-              <h2 style={{ margin: 0 }}>{customer.name}</h2>
-              <div className="small muted">{customer.email} · {customer.card_code}</div>
+          <div className="card stack">
+            <div className="row between">
+              <div>
+                <h2 style={{ margin: 0 }}>{customer.name}</h2>
+                <div className="small muted">{customer.email} · {customer.card_code}</div>
+              </div>
+              {tier && <span className="badge badge-hot"><Crown size={12} /> {tier.name}{tier.multiplier > 1 ? ` x${tier.multiplier}` : ""}</span>}
             </div>
-            <div className="center">
+            <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))" }}>
               <div className="stat"><div className="value">{customer.points}</div><div className="label">points</div></div>
+              {program.stamps.enabled && (
+                <div className="stat"><div className="value">{stampsOnCard}/{program.stamps.required}</div><div className="label">tampons</div></div>
+              )}
+              {program.cashback.enabled && (
+                <div className="stat"><div className="value">{formatEuros(customer.cashback_cents)}</div><div className="label">cashback</div></div>
+              )}
             </div>
           </div>
 
@@ -171,12 +202,10 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
             className="card stack"
             onSubmit={(e) => {
               e.preventDefault();
-              act({ action: "earn", amount, extraPoints: extra || 0 }, (r) =>
-                `+${r.points} points crédités${Number(r.multiplier) > 1 ? ` (x${r.multiplier})` : ""}. Nouveau solde : ${r.balance}`
-              );
+              act({ action: "earn", amount, extraPoints: extra || 0 }, (r) => `${r.summary} crédité(s). Solde : ${r.balance} points.`);
             }}
           >
-            <h3>Ajouter des points</h3>
+            <h3>Enregistrer le passage</h3>
             <div className="row">
               <label style={{ flex: 1 }}>
                 Montant de la commande (€)
@@ -187,28 +216,87 @@ export function Scanner({ isAdmin, pointsPerEuro, promo, rewards }: Props) {
                 <input className="input" inputMode="numeric" value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="0" />
               </label>
             </div>
-            <button className="btn btn-primary btn-block" disabled={busy || preview <= 0}>
-              Créditer {preview} point{preview > 1 ? "s" : ""}{multiplier > 1 ? ` (x${multiplier})` : ""}
+            <button className="btn btn-primary btn-block" disabled={busy || !previewText}>
+              {previewText ? `Créditer ${previewText}` : "Saisissez le montant"}
             </button>
+            {program.stamps.enabled && program.stamps.minAmount > 0 && (
+              <p className="small muted" style={{ margin: 0 }}>1 tampon dès {formatEuros(program.stamps.minAmount * 100)} de commande.</p>
+            )}
           </form>
 
-          <div className="card stack">
-            <h3>Utiliser une récompense</h3>
-            {rewards.map((r) => (
+          {program.stamps.enabled && (
+            <div className="card stack">
+              <h3><Stamp size={18} style={{ verticalAlign: "-3px" }} /> Carte tampons</h3>
               <button
-                key={r.id}
-                className="btn"
-                style={{ justifyContent: "space-between" }}
-                disabled={busy || customer.points < r.cost}
+                className="btn btn-gold btn-block"
+                disabled={busy || customer.stamps < program.stamps.required}
                 onClick={() => {
-                  if (confirm(`Offrir « ${r.name} » (${r.cost} points) ?`))
-                    act({ action: "redeem", rewardId: r.id }, (res) => `${res.reward} validé. Reste ${res.balance} points.`);
+                  if (confirm(`Offrir « ${program.stamps.reward} » et remettre la carte tampons à zéro ?`))
+                    act({ action: "stamps" }, (r) => `${r.reward} validé. Nouvelle carte : ${r.stampsBalance} tampon(s).`);
                 }}
               >
-                <span>{r.name}</span><span className="badge">{r.cost} pts</span>
+                {customer.stamps >= program.stamps.required
+                  ? `Offrir : ${program.stamps.reward}`
+                  : `${program.stamps.reward} dans ${program.stamps.required - customer.stamps} tampon(s)`}
               </button>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {program.cashback.enabled && (
+            <form
+              className="card stack"
+              onSubmit={(e) => {
+                e.preventDefault();
+                act({ action: "cashback", amount: cashbackAmount }, (r) => `${r.used} de cashback déduit. Reste ${formatEuros(Number(r.cashbackBalance))}.`);
+              }}
+            >
+              <h3><Coins size={18} style={{ verticalAlign: "-3px" }} /> Utiliser le cashback</h3>
+              <div className="row">
+                <input
+                  className="input"
+                  style={{ flex: 1 }}
+                  inputMode="decimal"
+                  value={cashbackAmount}
+                  onChange={(e) => setCashbackAmount(e.target.value)}
+                  placeholder={`max ${formatEuros(customer.cashback_cents)}`}
+                  aria-label="Montant de cashback à utiliser"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setCashbackAmount((customer.cashback_cents / 100).toFixed(2).replace(".", ","))}
+                >
+                  Tout
+                </button>
+              </div>
+              <button className="btn btn-block" disabled={busy || !cashbackAmount || customer.cashback_cents < program.cashback.minRedeem * 100}>
+                Déduire de la commande
+              </button>
+              {customer.cashback_cents < program.cashback.minRedeem * 100 && (
+                <p className="small muted" style={{ margin: 0 }}>Utilisable dès {formatEuros(program.cashback.minRedeem * 100)} de cagnotte.</p>
+              )}
+            </form>
+          )}
+
+          {rewards.length > 0 && (
+            <div className="card stack">
+              <h3>Récompenses (points)</h3>
+              {rewards.map((r) => (
+                <button
+                  key={r.id}
+                  className="btn"
+                  style={{ justifyContent: "space-between" }}
+                  disabled={busy || customer.points < r.cost}
+                  onClick={() => {
+                    if (confirm(`Offrir « ${r.name} » (${r.cost} points) ?`))
+                      act({ action: "redeem", rewardId: r.id }, (res) => `${res.reward} validé. Reste ${res.balance} points.`);
+                  }}
+                >
+                  <span>{r.name}</span><span className="badge">{r.cost} pts</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="row between">
             <button className="btn" onClick={() => { setCustomer(null); setMessage(null); setQuery(""); }}>

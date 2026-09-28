@@ -38,13 +38,17 @@ export function Clients() {
       {error && <div className="alert alert-error">{error}</div>}
       <section className="card table-wrap">
         <table>
-          <thead><tr><th>Client</th><th>Carte</th><th>Points</th><th>Dernière visite</th><th>Rôle</th></tr></thead>
+          <thead><tr><th>Client</th><th>Carte</th><th>Solde</th><th>Dernière visite</th><th>Rôle</th></tr></thead>
           <tbody>
             {customers.map((c) => (
               <tr key={c.id}>
                 <td>{c.name}<div className="small muted">{c.email}{c.phone ? ` · ${c.phone}` : ""}</div></td>
                 <td className="small" style={{ fontFamily: "monospace" }}>{c.card_code}</td>
-                <td><b>{c.points}</b><div className="small muted">{c.lifetime_points} cumulés</div></td>
+                <td>
+                  <b>{c.points}</b> pts<div className="small muted">{c.lifetime_points} cumulés · {c.stamps} tampon(s)
+                  {c.cashback_cents ? ` · ${(c.cashback_cents / 100).toFixed(2).replace(".", ",")} €` : ""}</div>
+                  {c.birthdate && <div className="small muted">🎂 {new Date(`${c.birthdate}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</div>}
+                </td>
                 <td className="small">{c.last_visit_at ? new Date(c.last_visit_at).toLocaleDateString("fr-FR") : "—"}</td>
                 <td>
                   <select value={c.role} onChange={(e) => setRole(c, e.target.value)} aria-label={`Rôle de ${c.name}`} style={{ minWidth: 150 }}>
