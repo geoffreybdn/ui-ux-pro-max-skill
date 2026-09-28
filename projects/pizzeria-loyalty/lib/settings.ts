@@ -1,92 +1,70 @@
 import { cache } from "react";
 import { sql } from "./db";
-import type { Tier } from "./program";
+import type { StampRule } from "./program";
 
-export type { Tier };
-export { tierFor, nextTier, formatEuros, renderTemplate, firstName, computeVisitGain, describeGain } from "./program";
+export type { StampRule };
+export { computeStamps, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
 
-export const NOTIFICATION_KEYS = [
-  "welcome",
-  "visit",
-  "reward",
-  "nearReward",
-  "stampNear",
-  "stampComplete",
-  "tierUp",
-  "birthday",
-  "referral",
-  "inactivity",
-  "promo",
-] as const;
+export const NOTIFICATION_KEYS = ["welcome", "visit", "stampNear", "stampComplete", "birthday", "referral", "inactivity", "promo"] as const;
 export type NotificationKey = (typeof NOTIFICATION_KEYS)[number];
 export type NotificationTemplate = { enabled: boolean; title: string; body: string };
 
 export type Settings = {
   pizzeriaName: string;
-  points: { enabled: boolean; perEuro: number };
-  stamps: { enabled: boolean; required: number; minAmount: number; reward: string };
-  cashback: { enabled: boolean; percent: number; minRedeem: number };
-  welcomeBonus: number;
-  birthdayBonus: number;
-  referral: { enabled: boolean; referrerBonus: number; refereeBonus: number };
-  tiers: { enabled: boolean; levels: Tier[] };
-  nearRewardPoints: number;
+  stamps: {
+    required: number;
+    reward: string;
+    rule: StampRule;
+    minAmount: number;
+    amountPerStamp: number;
+    unitLabel: string;
+    maxPerVisit: number;
+  };
+  welcomeStamps: number;
+  birthdayStamps: number;
+  referral: { enabled: boolean; referrerStamps: number; refereeStamps: number };
+  nearRewardStamps: number;
   inactivityDays: number;
   notifications: Record<NotificationKey, NotificationTemplate>;
 };
 
 /** Libellés + variables disponibles, affichés dans l'admin. */
 export const NOTIFICATION_INFO: Record<NotificationKey, { label: string; when: string; vars: string }> = {
-  welcome: { label: "Bienvenue", when: "à l'activation des notifications après l'inscription", vars: "{prenom} {solde}" },
-  visit: { label: "Passage en caisse", when: "après chaque passage scanné", vars: "{prenom} {gain} {solde}" },
-  reward: { label: "Récompense débloquée", when: "quand le solde atteint une récompense", vars: "{prenom} {recompense} {solde}" },
-  nearReward: { label: "Récompense proche", when: "quand il manque peu de points", vars: "{prenom} {reste} {recompense} {solde}" },
-  stampNear: { label: "Dernier tampon", when: "quand il ne manque qu'un tampon", vars: "{prenom} {recompense}" },
-  stampComplete: { label: "Carte tampons complète", when: "quand la carte tampons est pleine", vars: "{prenom} {recompense}" },
-  tierUp: { label: "Nouveau niveau", when: "au passage à un niveau supérieur", vars: "{prenom} {niveau}" },
-  birthday: { label: "Anniversaire", when: "le jour de l'anniversaire (cron quotidien)", vars: "{prenom} {bonus} {solde}" },
+  welcome: { label: "Bienvenue", when: "à l'activation des notifications après l'inscription", vars: "{prenom} {tampons} {total} {recompense}" },
+  visit: { label: "Tampon ajouté", when: "après chaque passage scanné", vars: "{prenom} {gain} {tampons} {total} {reste}" },
+  stampNear: { label: "Récompense proche", when: "quand il reste peu de tampons", vars: "{prenom} {reste} {recompense}" },
+  stampComplete: { label: "Carte complète", when: "quand la carte est pleine", vars: "{prenom} {recompense}" },
+  birthday: { label: "Anniversaire", when: "le jour de l'anniversaire (cron quotidien)", vars: "{prenom} {bonus} {tampons} {total}" },
   referral: { label: "Parrainage réussi", when: "quand un filleul s'inscrit", vars: "{prenom} {filleul} {bonus}" },
-  inactivity: { label: "Relance inactivité", when: "après X jours sans visite (cron quotidien)", vars: "{prenom} {solde}" },
+  inactivity: { label: "Relance inactivité", when: "après X jours sans visite (cron quotidien)", vars: "{prenom} {tampons} {total} {reste} {recompense}" },
   promo: { label: "Promotion", when: "au démarrage d'une promo (titre/message de la promo)", vars: "—" },
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   pizzeriaName: process.env.NEXT_PUBLIC_PIZZERIA_NAME || "La Bella Pizza",
-  points: { enabled: true, perEuro: Number(process.env.POINTS_PER_EURO || 1) },
-  stamps: { enabled: true, required: 10, minAmount: 10, reward: "Pizza offerte" },
-  cashback: { enabled: false, percent: 5, minRedeem: 5 },
-  welcomeBonus: 10,
-  birthdayBonus: 50,
-  referral: { enabled: true, referrerBonus: 30, refereeBonus: 20 },
-  tiers: {
-    enabled: true,
-    levels: [
-      { name: "Bronze", min: 0, multiplier: 1 },
-      { name: "Argent", min: 300, multiplier: 1.1 },
-      { name: "Or", min: 800, multiplier: 1.25 },
-    ],
-  },
-  nearRewardPoints: 15,
-  inactivityDays: Number(process.env.INACTIVITY_REMINDER_DAYS || 30),
+  stamps: { required: 10, reward: "Pizza offerte", rule: "visit", minAmount: 10, amountPerStamp: 10, unitLabel: "pizza", maxPerVisit: 0 },
+  welcomeStamps: 1,
+  birthdayStamps: 2,
+  referral: { enabled: true, referrerStamps: 2, refereeStamps: 1 },
+  nearRewardStamps: 2,
+  inactivityDays: 30,
   notifications: {
-    welcome: { enabled: true, title: "Bienvenue {prenom} ! 🍕", body: "Votre carte est prête : vous avez déjà {solde} points." },
-    visit: { enabled: true, title: "Merci pour votre visite !", body: "{gain} — solde : {solde} points." },
-    reward: { enabled: true, title: "🎁 Récompense débloquée !", body: "{prenom}, vous pouvez obtenir : {recompense}." },
-    nearReward: { enabled: true, title: "Plus que {reste} points ! 🔥", body: "{recompense} est presque à vous, {prenom}." },
-    stampNear: { enabled: true, title: "Plus qu'un tampon !", body: "À votre prochaine visite : {recompense} 🎉" },
-    stampComplete: { enabled: true, title: "Carte tampons complète ! 🎉", body: "{recompense} vous attend en caisse." },
-    tierUp: { enabled: true, title: "Niveau {niveau} atteint ⭐", body: "Bravo {prenom} ! Vous gagnez désormais plus de points à chaque visite." },
-    birthday: { enabled: true, title: "Joyeux anniversaire {prenom} ! 🎂", body: "On vous offre {bonus} points. Venez fêter ça !" },
-    referral: { enabled: true, title: "Merci pour le parrainage ! 🙌", body: "{filleul} s'est inscrit grâce à vous : +{bonus} points." },
-    inactivity: { enabled: true, title: "Vous nous manquez ! 🍕", body: "{prenom}, vos {solde} points vous attendent." },
+    welcome: { enabled: true, title: "Bienvenue {prenom} ! 🍕", body: "Votre carte est prête : {tampons}/{total} tampons. {recompense} vous attend au bout !" },
+    visit: { enabled: true, title: "{gain} ✅", body: "Merci {prenom} ! Votre carte : {tampons}/{total}." },
+    stampNear: { enabled: true, title: "Plus que {reste} tampon(s) ! 🔥", body: "{recompense} est presque à vous, {prenom}." },
+    stampComplete: { enabled: true, title: "Carte complète ! 🎉", body: "{recompense} vous attend en caisse, {prenom}." },
+    birthday: { enabled: true, title: "Joyeux anniversaire {prenom} ! 🎂", body: "On vous offre {bonus} tampon(s). Votre carte : {tampons}/{total}." },
+    referral: { enabled: true, title: "Merci pour le parrainage ! 🙌", body: "{filleul} s'est inscrit grâce à vous : +{bonus} tampon(s)." },
+    inactivity: { enabled: true, title: "Vous nous manquez ! 🍕", body: "{prenom}, plus que {reste} tampon(s) avant : {recompense}." },
     promo: { enabled: true, title: "", body: "" },
   },
 };
 
 const num = (v: unknown, def: number, min: number, max: number) => {
   const n = Number(v);
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
+  return v !== null && v !== "" && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
 };
+const int = (v: unknown, def: number, min: number, max: number) => Math.round(num(v, def, min, max));
 const bool = (v: unknown, def: boolean) => (typeof v === "boolean" ? v : def);
 const str = (v: unknown, def: string, max = 200) => (typeof v === "string" ? v.slice(0, max) : def);
 
@@ -94,17 +72,10 @@ const str = (v: unknown, def: string, max = 200) => (typeof v === "string" ? v.s
 export function normalizeSettings(raw: unknown): Settings {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const d = DEFAULT_SETTINGS;
-  const levels: Tier[] = Array.isArray(r.tiers?.levels) && r.tiers.levels.length
-    ? r.tiers.levels.slice(0, 5).map((l: Record<string, unknown>, i: number) => ({
-        name: str(l?.name, `Niveau ${i + 1}`, 30) || `Niveau ${i + 1}`,
-        min: i === 0 ? 0 : Math.round(num(l?.min, 0, 0, 1_000_000)),
-        multiplier: num(l?.multiplier, 1, 1, 5),
-      }))
-    : d.tiers.levels;
-  levels.sort((a, b) => a.min - b.min);
+  const st = r.stamps ?? {};
 
   const notifications = {} as Settings["notifications"];
-  for (const k of Object.keys(d.notifications) as NotificationKey[]) {
+  for (const k of NOTIFICATION_KEYS) {
     const n = r.notifications?.[k];
     notifications[k] = {
       enabled: bool(n?.enabled, d.notifications[k].enabled),
@@ -115,28 +86,24 @@ export function normalizeSettings(raw: unknown): Settings {
 
   return {
     pizzeriaName: str(r.pizzeriaName, d.pizzeriaName, 50).trim() || d.pizzeriaName,
-    points: { enabled: bool(r.points?.enabled, d.points.enabled), perEuro: num(r.points?.perEuro, d.points.perEuro, 0, 100) },
     stamps: {
-      enabled: bool(r.stamps?.enabled, d.stamps.enabled),
-      required: Math.round(num(r.stamps?.required, d.stamps.required, 2, 50)),
-      minAmount: num(r.stamps?.minAmount, d.stamps.minAmount, 0, 500),
-      reward: str(r.stamps?.reward, d.stamps.reward, 60).trim() || d.stamps.reward,
+      required: int(st.required, d.stamps.required, 2, 50),
+      reward: str(st.reward, d.stamps.reward, 60).trim() || d.stamps.reward,
+      rule: ["visit", "amount", "quantity"].includes(st.rule) ? st.rule : d.stamps.rule,
+      minAmount: num(st.minAmount, d.stamps.minAmount, 0, 500),
+      amountPerStamp: num(st.amountPerStamp, d.stamps.amountPerStamp, 1, 500),
+      unitLabel: str(st.unitLabel, d.stamps.unitLabel, 30).trim() || d.stamps.unitLabel,
+      maxPerVisit: int(st.maxPerVisit, d.stamps.maxPerVisit, 0, 50),
     },
-    cashback: {
-      enabled: bool(r.cashback?.enabled, d.cashback.enabled),
-      percent: num(r.cashback?.percent, d.cashback.percent, 0, 50),
-      minRedeem: num(r.cashback?.minRedeem, d.cashback.minRedeem, 0, 500),
-    },
-    welcomeBonus: Math.round(num(r.welcomeBonus, d.welcomeBonus, 0, 10_000)),
-    birthdayBonus: Math.round(num(r.birthdayBonus, d.birthdayBonus, 0, 10_000)),
+    welcomeStamps: int(r.welcomeStamps, d.welcomeStamps, 0, 20),
+    birthdayStamps: int(r.birthdayStamps, d.birthdayStamps, 0, 20),
     referral: {
       enabled: bool(r.referral?.enabled, d.referral.enabled),
-      referrerBonus: Math.round(num(r.referral?.referrerBonus, d.referral.referrerBonus, 0, 10_000)),
-      refereeBonus: Math.round(num(r.referral?.refereeBonus, d.referral.refereeBonus, 0, 10_000)),
+      referrerStamps: int(r.referral?.referrerStamps, d.referral.referrerStamps, 0, 20),
+      refereeStamps: int(r.referral?.refereeStamps, d.referral.refereeStamps, 0, 20),
     },
-    tiers: { enabled: bool(r.tiers?.enabled, d.tiers.enabled), levels },
-    nearRewardPoints: Math.round(num(r.nearRewardPoints, d.nearRewardPoints, 0, 10_000)),
-    inactivityDays: Math.round(num(r.inactivityDays, d.inactivityDays, 7, 365)),
+    nearRewardStamps: int(r.nearRewardStamps, d.nearRewardStamps, 0, 10),
+    inactivityDays: int(r.inactivityDays, d.inactivityDays, 7, 365),
     notifications,
   };
 }
@@ -158,4 +125,3 @@ export async function saveSettings(input: unknown) {
     on conflict (id) do update set data = excluded.data, updated_at = now()`;
   return settings;
 }
-

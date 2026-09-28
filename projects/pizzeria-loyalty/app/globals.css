@@ -361,3 +361,20 @@ details > summary::-webkit-details-marker { display: none; }
   .admin-content { padding: 0; }
   .poster { border: 0; }
 }
+
+/* Paramétrage de la carte à tampons */
+.program-preview { display: flex; gap: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.program-preview .stamp-grid { flex: 1; min-width: 240px; max-width: 360px; }
+.rule-choices { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.rule-choices legend { font-weight: 700; margin-bottom: 8px; }
+.rule-choice { flex-direction: row; align-items: flex-start; gap: 10px; padding: 14px; border: 1.5px solid var(--panel-border, var(--border)); border-radius: 14px; cursor: pointer; font-weight: 400; }
+.rule-choice > span { display: flex; flex-direction: column; gap: 2px; }
+.rule-choice input { width: 18px; height: 18px; margin-top: 2px; accent-color: #2563eb; flex: none; }
+.rule-choice.is-selected { border-color: #2563eb; background: #eff6ff; }
+.btn-lg { min-height: 56px; font-size: 1.1rem; }
+.qty { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.qty-value { min-width: 48px; text-align: center; font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stamp-grid-card { margin-top: 16px; position: relative; z-index: 1; }
+.stamp-grid-card .stamp { background: rgb(255 255 255 / 12%); border-color: rgb(255 255 255 / 45%); }
+.stamp-grid-card .stamp-on { background: #fff; border: 2px solid #fff; }
+.stamp-grid-card .stamp-gift { background: rgb(234 179 8 / 35%); border-color: #fde047; }

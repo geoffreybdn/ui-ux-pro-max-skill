@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertRole } from "@/lib/auth";
 import { handle, bad } from "@/lib/api";
-import { adjustPoints, recordVisit, redeemReward, redeemStampCard, useCashback } from "@/lib/loyalty";
+import { adjustStamps, recordVisit, redeemStampCard } from "@/lib/loyalty";
 
 const toCents = (v: unknown) => Math.round(Number(String(v ?? 0).replace(",", ".")) * 100);
 
@@ -14,27 +14,20 @@ export const POST = handle(async (req: Request) => {
   try {
     switch (body.action) {
       case "earn": {
-        const amountCents = toCents(body.amount);
-        const extraPoints = Math.trunc(Number(body.extraPoints || 0));
+        const amountCents = body.amount === undefined || body.amount === "" ? 0 : toCents(body.amount);
+        const quantity = Math.trunc(Number(body.quantity || 0));
         if (!(amountCents >= 0) || amountCents > 100_000) bad("Montant invalide");
-        if (!(extraPoints >= 0) || extraPoints > 1000) bad("Points bonus invalides");
-        return NextResponse.json(await recordVisit({ customerId, amountCents, extraPoints, staffId: staff.id }));
+        if (!(quantity >= 0) || quantity > 50) bad("Quantité invalide");
+        return NextResponse.json(await recordVisit({ customerId, amountCents, quantity, staffId: staff.id }));
       }
-      case "redeem":
-        return NextResponse.json(await redeemReward({ customerId, rewardId: Number(body.rewardId), staffId: staff.id }));
-      case "stamps":
+      case "reward":
         return NextResponse.json(await redeemStampCard({ customerId, staffId: staff.id }));
-      case "cashback": {
-        const cents = toCents(body.amount);
-        if (!(cents > 0) || cents > 100_000) bad("Montant invalide");
-        return NextResponse.json(await useCashback({ customerId, cents, staffId: staff.id }));
-      }
       case "adjust": {
         if (staff.role !== "admin") bad("Réservé aux administrateurs", 403);
-        const points = Math.trunc(Number(body.points));
-        if (!points) bad("Nombre de points invalide");
+        const stamps = Math.trunc(Number(body.stamps));
+        if (!stamps || Math.abs(stamps) > 100) bad("Nombre de tampons invalide");
         return NextResponse.json(
-          await adjustPoints({ customerId, points, staffId: staff.id, note: String(body.note || "Ajustement manuel") })
+          await adjustStamps({ customerId, stamps, staffId: staff.id, note: String(body.note || "Correction manuelle") })
         );
       }
     }

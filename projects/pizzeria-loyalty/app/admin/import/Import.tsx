@@ -4,10 +4,10 @@ import { useState } from "react";
 import { FileUp } from "lucide-react";
 import { api } from "@/components/useApi";
 
-type Preview = { preview: { email: string; name: string | null; points: number }[]; total: number; errors: string[] };
+type Preview = { preview: { email: string; name: string | null; stamps: number }[]; total: number; errors: string[] };
 type Result = { imported: number; creditedAccounts: number; errors: string[] };
 
-const SAMPLE = "email;nom;telephone;points\nmarie.dupont@example.com;Marie Dupont;0612345678;85\njean@example.com;Jean Martin;;40\n";
+const SAMPLE = "email;nom;telephone;tampons\nmarie.dupont@example.com;Marie Dupont;0612345678;7\njean@example.com;Jean Martin;;3\n";
 
 export function Import() {
   const [csv, setCsv] = useState("");
@@ -54,12 +54,12 @@ export function Import() {
       <h1>Importer les anciens clients</h1>
       <div className="card stack">
         <p>
-          Importez le fichier CSV de votre ancienne carte de fidélité. Colonnes requises : <b>email</b> et <b>points</b>{" "}
+          Importez le fichier CSV de votre ancienne carte de fidélité. Colonnes requises : <b>email</b> et <b>tampons</b>{" "}
           (facultatif : <b>nom</b>, <b>telephone</b>). Séparateur <code>;</code> ou <code>,</code>.
         </p>
         <ul className="small" style={{ margin: 0 }}>
-          <li>Client <b>déjà inscrit</b> avec cet e-mail : les points sont ajoutés immédiatement (+ notification).</li>
-          <li>Client <b>pas encore inscrit</b> : les points l&apos;attendent et sont crédités dès qu&apos;il crée son compte avec le même e-mail.</li>
+          <li>Client <b>déjà inscrit</b> avec cet e-mail : les tampons sont ajoutés immédiatement (+ notification).</li>
+          <li>Client <b>pas encore inscrit</b> : les tampons l&apos;attendent et sont crédités dès qu&apos;il crée son compte avec le même e-mail.</li>
           <li>Réimporter le même fichier ne crédite jamais deux fois.</li>
         </ul>
         <div className="row">
@@ -84,10 +84,10 @@ export function Import() {
           <h2>Aperçu — {preview.total} client(s)</h2>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>E-mail</th><th>Nom</th><th>Points</th></tr></thead>
+              <thead><tr><th>E-mail</th><th>Nom</th><th>Tampons</th></tr></thead>
               <tbody>
                 {preview.preview.map((r) => (
-                  <tr key={r.email}><td>{r.email}</td><td>{r.name ?? "—"}</td><td>{r.points}</td></tr>
+                  <tr key={r.email}><td>{r.email}</td><td>{r.name ?? "—"}</td><td>{r.stamps}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -107,7 +107,7 @@ export function Import() {
       {result && (
         <div className="alert alert-success">
           {result.imported} client(s) importé(s). {result.creditedAccounts} compte(s) existant(s) crédité(s) immédiatement ; les
-          autres recevront leurs points à l&apos;inscription.
+          autres recevront leurs tampons à l&apos;inscription.
         </div>
       )}
     </div>

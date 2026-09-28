@@ -4,18 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bell, Crown, Flame, Gift, KeyRound, LayoutDashboard, LogOut, Menu, QrCode, ScanLine, Search,
-  ShieldCheck, SlidersHorizontal, Upload, Users, WalletCards, X,
+  Bell, Crown, Flame, KeyRound, Stamp, LayoutDashboard, LogOut, Menu, QrCode, ScanLine, Search,
+  ShieldCheck, Upload, Users, WalletCards, X,
 } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard, admin: true },
   { href: "/admin/scanner", label: "Scanner", icon: ScanLine, admin: false },
   { href: "/admin/clients", label: "Clients", icon: Users, admin: true },
-  { href: "/admin/programme", label: "Programme", icon: SlidersHorizontal, admin: true },
+  { href: "/admin/programme", label: "Carte à tampons", icon: Stamp, admin: true },
   { href: "/admin/promotions", label: "Campagnes", icon: Flame, admin: true },
   { href: "/admin/notifications", label: "Notifications push", icon: Bell, admin: true },
-  { href: "/admin/recompenses", label: "Récompenses", icon: Gift, admin: true },
   { href: "/admin/affiche", label: "QR d'inscription", icon: QrCode, admin: true },
   { href: "/admin/codes", label: "Codes promo", icon: KeyRound, admin: true },
   { href: "/admin/import", label: "Import CSV", icon: Upload, admin: true },

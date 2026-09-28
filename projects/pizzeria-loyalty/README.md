@@ -4,34 +4,34 @@ Application web (PWA) de carte de fidélité pour pizzeria, prête pour **Vercel
 
 ## Fonctionnalités
 
-Tout le programme se règle depuis **Admin → Programme** (sans redéployer) :
+Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin → Carte à tampons** (sans redéployer) :
 
-| Mécanique | Réglages |
+| Réglage | Options |
 |---|---|
-| **Points** | points par euro, récompenses échangeables (Admin → Récompenses), alerte « récompense proche » |
-| **Carte à tampons** | nombre de tampons, commande minimum, récompense (1 tampon/commande, 2 pendant une promo x2) |
-| **Cashback** | % reversé dans une cagnotte en €, montant minimum pour l'utiliser en caisse |
-| **Niveaux VIP** | jusqu'à 5 niveaux (Bronze → Argent → Or…) selon les points cumulés, avec multiplicateur de gains |
-| **Bonus** | bienvenue à l'inscription, anniversaire (une fois par an), parrainage parrain / filleul |
-| **Promotions** | double / triple gains sur une période (points, tampons, cashback), annoncées par notification |
-| **Codes d'inscription** | points offerts avec un code boutique (limite d'utilisations, expiration) |
+| **La carte** | nombre de tampons (2 à 50), récompense (ex. « Pizza offerte ») |
+| **Règle de gain** | 1 tampon par passage (avec commande minimum) · 1 tampon par tranche de X € · 1 tampon par produit (l'équipe saisit la quantité) |
+| **Plafond** | maximum de tampons par passage (optionnel) |
+| **Tampons offerts** | à l'inscription, le jour de l'anniversaire (une fois par an), parrainage parrain / filleul, codes boutique |
+| **Promotions** | tampons doublés / triplés sur une période, annoncés par notification |
+| **Notifications** | chacune activable et modifiable, seuil « récompense proche », délai de relance |
 
-Côté client : carte avec QR code, solde de points, grille de tampons, cagnotte cashback, niveau et progression,
-lien de parrainage, historique, profil (date de naissance), installation sur l'écran d'accueil, accès hors connexion.
+Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil (anniversaire),
+installation sur l'écran d'accueil, accès hors connexion.
 
-Côté équipe : scanner caméra, enregistrement du passage (aperçu du gain avant validation), carte tampons,
-cashback, récompenses, plusieurs admins / employés, tableau de bord.
+Côté équipe : scanner caméra, ajout de tampons (aperçu avant validation), bouton « Offrir la récompense »,
+correction manuelle (admin), plusieurs admins / employés, tableau de bord (tampons distribués, cadeaux offerts,
+où en sont les cartes, origine des inscriptions…).
 
 ### Notifications automatiques (activables et modifiables une par une)
-Bienvenue · passage en caisse · récompense proche · récompense débloquée · dernier tampon · carte tampons complète ·
-nouveau niveau · anniversaire · parrainage réussi · relance d'inactivité · démarrage d'une promotion.
-Les messages acceptent des variables : `{prenom}`, `{solde}`, `{gain}`, `{recompense}`, `{reste}`, `{bonus}`, `{niveau}`, `{filleul}`.
+Bienvenue · tampon ajouté · récompense proche · carte complète · anniversaire · parrainage réussi ·
+relance d'inactivité · démarrage d'une promotion.
+Variables : `{prenom}`, `{tampons}`, `{total}`, `{reste}`, `{gain}`, `{recompense}`, `{bonus}`, `{filleul}`.
 
 ### Import CSV des anciens clients
-Colonnes obligatoires `email` et `points`, facultatives `nom` et `telephone` (séparateur `;` ou `,`, UTF-8 ou export Excel).
+Colonnes obligatoires `email` et `tampons` (ou `points`), facultatives `nom` et `telephone` (séparateur `;` ou `,`, UTF-8 ou export Excel).
 
-- Client **déjà inscrit** avec cet e-mail → points crédités immédiatement.
-- Client **pas encore inscrit** → points mis en attente, puis ajoutés **automatiquement dès qu'il s'inscrit avec la même adresse e-mail**.
+- Client **déjà inscrit** avec cet e-mail → tampons crédités immédiatement.
+- Client **pas encore inscrit** → tampons mis en attente, puis ajoutés **automatiquement dès qu'il s'inscrit avec la même adresse e-mail**.
 - Réimporter le même fichier ne crédite jamais deux fois.
 
 ## Déploiement (Vercel + Neon)
@@ -56,7 +56,7 @@ Colonnes obligatoires `email` et `points`, facultatives `nom` et `telephone` (s�
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | sortie de `npm run vapid` |
    | `VAPID_SUBJECT` | `mailto:patron@mapizzeria.fr` |
    | `CRON_SECRET` | chaîne aléatoire |
-   | `NEXT_PUBLIC_PIZZERIA_NAME` | `La Bella Pizza` (valeur initiale, modifiable ensuite dans Admin → Programme) |
+   | `NEXT_PUBLIC_PIZZERIA_NAME` | `La Bella Pizza` (valeur initiale, modifiable ensuite dans Admin → Carte à tampons) |
 
 6. Redéployer, puis **inscrivez-vous avec l'e-mail de `ADMIN_EMAILS`** : ce compte devient administrateur
    (`ADMIN_EMAILS` accepte plusieurs e-mails séparés par des virgules).

@@ -24,7 +24,7 @@ export function Promotions() {
   const [busy, setBusy] = useState(false);
   const now = new Date();
   const [form, setForm] = useState({
-    title: "Double points ce week-end 🍕",
+    title: "Tampons doublés ce week-end 🍕",
     message: "",
     multiplier: "2",
     startsAt: toLocalInput(now),
@@ -69,19 +69,18 @@ export function Promotions() {
     <div className="stack">
       <h1>Promotions</h1>
       <form className="card stack" onSubmit={submit}>
-        <h2><Flame size={20} style={{ verticalAlign: "-3px" }} /> Nouvelle promo points multipliés</h2>
+        <h2><Flame size={20} style={{ verticalAlign: "-3px" }} /> Nouvelle promo tampons multipliés</h2>
         {msg && <div className={`alert alert-${msg.kind}`}>{msg.text}</div>}
         <label>Titre (aussi utilisé comme titre de la notification)<input className="input" value={form.title} onChange={set("title")} required /></label>
         <label>
           Message de la notification <span className="hint">(facultatif)</span>
-          <textarea rows={2} value={form.message} onChange={set("message")} placeholder="Vos points sont doublés tout le week-end !" />
+          <textarea rows={2} value={form.message} onChange={set("message")} placeholder="Vos tampons sont doublés tout le week-end !" />
         </label>
         <div className="grid">
           <label>Multiplicateur
             <select value={form.multiplier} onChange={set("multiplier")}>
-              <option value="1.5">x1,5</option>
-              <option value="2">x2 — double points</option>
-              <option value="3">x3 — triple points</option>
+              <option value="2">x2 — tampons doublés</option>
+              <option value="3">x3 — tampons triplés</option>
             </select>
           </label>
           <label>Début<input className="input" type="datetime-local" value={form.startsAt} onChange={set("startsAt")} required /></label>

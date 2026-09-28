@@ -7,7 +7,7 @@ import { announceStartedPromotions, getActivePromotion } from "@/lib/loyalty";
 import { getSettings } from "@/lib/settings";
 import {
   PERIODS, parsePeriod, getKpis, getMonthlySignups, getSegments, getSignupSources, getDevices,
-  getTopCustomers, getTopRewards, getRecentCampaigns, getRecentActivity, type Kpi,
+  getTopCustomers, getCardProgress, getRecentCampaigns, getRecentActivity, type Kpi,
 } from "@/lib/stats";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { LineChart } from "@/components/charts/LineChart";
@@ -58,12 +58,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // Rattrapage : annonce une promo programmée qui a démarré depuis le dernier cron
   await announceStartedPromotions().catch(() => null);
 
-  const [settings, promo, kpis, monthly, segments, sources, devices, topCustomers, topRewards, campaigns, activity] =
+  const [settings, promo, kpis, monthly, segments, sources, devices, topCustomers, campaigns, activity] =
     await Promise.all([
       getSettings(), getActivePromotion(), getKpis(period), getMonthlySignups(), getSegments(), getSignupSources(),
-      getDevices(), getTopCustomers(), getTopRewards(period), getRecentCampaigns(), getRecentActivity(),
+      getDevices(), getTopCustomers(), getRecentCampaigns(), getRecentActivity(),
     ]);
 
+  const progress = await getCardProgress(settings.stamps.required);
   const days = Number(period);
   const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   const range = `${fmt(new Date(Date.now() - (days - 1) * 86400_000))} – ${fmt(new Date())}`;
@@ -86,14 +87,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </div>
 
       {promo && (
-        <div className="promo-banner"><Flame size={20} /> En cours : {promo.title} (gains x{Number(promo.multiplier)})</div>
+        <div className="promo-banner"><Flame size={20} /> En cours : {promo.title} (tampons x{Number(promo.multiplier)})</div>
       )}
 
       <section className="kpi-grid" aria-label="Indicateurs clés">
         <KpiCard title="Clients enregistrés" kpi={kpis.registered} icon={<Users size={26} />} tone="tone-blue" color="var(--series-1)" note="de nouveaux inscrits sur la période" />
         <KpiCard title="Clients actifs" kpi={kpis.active} icon={<UserCheck size={26} />} tone="tone-green" color="var(--series-3)" note={vs} />
-        <KpiCard title={settings.stamps.enabled ? "Visites / tampons" : "Visites"} kpi={kpis.visits} icon={<Stamp size={26} />} tone="tone-orange" color="var(--series-2)" note={vs} />
-        <KpiCard title="Récompenses utilisées" kpi={kpis.rewards} icon={<Gift size={26} />} tone="tone-pink" color="var(--series-5)" note={vs} />
+        <KpiCard title="Tampons distribués" kpi={kpis.visits} icon={<Stamp size={26} />} tone="tone-orange" color="var(--series-2)" note={vs} />
+        <KpiCard title="Cadeaux offerts" kpi={kpis.rewards} icon={<Gift size={26} />} tone="tone-pink" color="var(--series-5)" note={vs} />
       </section>
 
       <div className="dash-row dash-row-2-1">
@@ -115,12 +116,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <li key={c.id}>
                 <span className="rank">{i + 1}</span>
                 <div className="rank-main">
-                  <div className="rank-top"><b>{c.name}</b><span className="muted small">{c.visits} visite{c.visits > 1 ? "s" : ""}</span></div>
+                  <div className="rank-top"><b>{c.name}</b><span className="muted small">{c.rewards} cadeau{c.rewards > 1 ? "x" : ""}</span></div>
                   <div className="barlist-track">
-                    <span style={{ width: `${(c.lifetime_points / Math.max(topCustomers[0]?.lifetime_points ?? 1, 1)) * 100}%`, background: "var(--series-1)" }} />
+                    <span style={{ width: `${(c.total / Math.max(topCustomers[0]?.total ?? 1, 1)) * 100}%`, background: "var(--series-1)" }} />
                   </div>
                 </div>
-                <span className="rank-value">{c.lifetime_points.toLocaleString("fr-FR")} pts</span>
+                <span className="rank-value">{c.total} tampon{c.total > 1 ? "s" : ""}</span>
               </li>
             ))}
             {topCustomers.length === 0 && <li className="small muted">Pas encore de clients.</li>}
@@ -168,9 +169,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       <div className="dash-row dash-row-3">
         <section className="panel">
-          <div className="panel-head"><h2>Récompenses les plus utilisées</h2><Link href="/admin/recompenses">Voir tout</Link></div>
-          <BarList items={topRewards.map((r) => ({ label: r.label, value: r.count, sub: `${r.count} utilisation${r.count > 1 ? "s" : ""}` }))} color="var(--series-2)" />
-          <p className="small muted" style={{ marginTop: 8 }}>{PERIODS[period]}</p>
+          <div className="panel-head"><h2>Où en sont les cartes</h2><Link href="/admin/programme">Paramétrer</Link></div>
+          <BarList items={progress.map((p) => ({ label: p.label, value: p.value, sub: `${p.value} client${p.value > 1 ? "s" : ""}` }))} color="var(--series-2)" />
+          <p className="small muted" style={{ marginTop: 8 }}>Carte de {settings.stamps.required} tampons · {settings.stamps.reward}</p>
         </section>
         <section className="panel">
           <div className="panel-head"><h2>Origine des inscriptions</h2><Link href="/admin/affiche">QR d&apos;inscription</Link></div>

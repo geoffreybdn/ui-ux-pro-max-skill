@@ -8,7 +8,7 @@ export function ReferralShare({ code, pizzeriaName }: { code: string; pizzeriaNa
 
   async function share() {
     const url = `${window.location.origin}/inscription?code=${encodeURIComponent(code)}`;
-    const text = `Rejoins la carte fidélité ${pizzeriaName} avec mon code ${code} et gagne des points en plus 🍕`;
+    const text = `Rejoins la carte fidélité ${pizzeriaName} avec mon code ${code} et gagne des tampons offerts 🍕`;
     if (navigator.share) {
       await navigator.share({ title: pizzeriaName, text, url }).catch(() => {});
     } else {

@@ -3,7 +3,7 @@ import { sql } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { handle, bad } from "@/lib/api";
 import { notify } from "@/lib/notify";
-import { firstName } from "@/lib/settings";
+import { cardState, firstName, getSettings } from "@/lib/settings";
 
 export const POST = handle(async (req: Request) => {
   const user = await getCurrentUser();
@@ -23,7 +23,13 @@ export const POST = handle(async (req: Request) => {
   if (row?.inserted) {
     // Premier appareil abonné : message de bienvenue (modifiable dans Admin → Programme)
     const [{ n }] = await sql<{ n: number }>`select count(*)::int as n from push_subscriptions where customer_id = ${user.id}`;
-    if (n === 1) await notify(user.id, "welcome", { prenom: firstName(user.name), solde: user.points });
+    if (n === 1) {
+      const s = await getSettings();
+      const st = cardState(user.stamps, s.stamps.required);
+      await notify(user.id, "welcome", {
+        prenom: firstName(user.name), tampons: st.available ? s.stamps.required : st.onCard, total: s.stamps.required, recompense: s.stamps.reward,
+      });
+    }
   }
   return NextResponse.json({ ok: true });
 });

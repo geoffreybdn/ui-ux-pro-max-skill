@@ -8,7 +8,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: `${pizzeriaName} — Fidélité`,
     short_name: pizzeriaName,
-    description: "Votre carte de fidélité, vos points et nos promos.",
+    description: "Votre carte à tampons et nos promos.",
     id: "/carte",
     start_url: "/carte",
     scope: "/",

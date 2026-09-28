@@ -1,18 +1,48 @@
-// Fonctions pures du programme de fidélité (utilisables côté serveur ET navigateur).
+// Règles pures de la carte à tampons (utilisables côté serveur ET navigateur).
 import type { Settings } from "./settings";
 
-export type Tier = { name: string; min: number; multiplier: number };
+export type StampRule = "visit" | "amount" | "quantity";
+type StampConfig = Settings["stamps"];
 
-export function tierFor(settings: Pick<Settings, "tiers">, lifetimePoints: number): Tier | null {
-  if (!settings.tiers.enabled) return null;
-  let current: Tier | null = null;
-  for (const t of settings.tiers.levels) if (lifetimePoints >= t.min) current = t;
-  return current;
+/**
+ * Tampons gagnés lors d'un passage :
+ * - visit    : 1 tampon par passage (si la commande atteint le minimum)
+ * - amount   : 1 tampon par tranche de X € dépensés
+ * - quantity : le nombre saisi en caisse (ex. nombre de pizzas)
+ * La promo en cours multiplie le résultat (x2 = tampons doublés), dans la limite du plafond par passage.
+ */
+export function computeStamps(
+  s: StampConfig,
+  opts: { amountCents: number; quantity: number; promoMultiplier: number }
+): number {
+  let base = 0;
+  if (s.rule === "visit") base = opts.amountCents >= Math.round(s.minAmount * 100) ? 1 : 0;
+  else if (s.rule === "amount") base = s.amountPerStamp > 0 ? Math.floor(opts.amountCents / Math.round(s.amountPerStamp * 100)) : 0;
+  else base = Math.max(0, Math.trunc(opts.quantity));
+  if (s.maxPerVisit > 0) base = Math.min(base, s.maxPerVisit);
+  return base > 0 ? Math.max(base, Math.floor(base * opts.promoMultiplier)) : 0;
 }
 
-export function nextTier(settings: Pick<Settings, "tiers">, lifetimePoints: number): Tier | null {
-  if (!settings.tiers.enabled) return null;
-  return settings.tiers.levels.find((t) => t.min > lifetimePoints) ?? null;
+/** Position sur la carte : récompenses disponibles + tampons de la carte en cours. */
+export function cardState(stamps: number, required: number) {
+  const available = Math.floor(stamps / required);
+  const onCard = stamps - available * required;
+  return { available, onCard, remaining: required - onCard };
+}
+
+/** Colonnes de la grille : 6 → une ligne, 8 → 2×4, 10 → 2×5, 12 → 2×6… */
+export function stampCols(required: number) {
+  return required <= 6 ? required : Math.min(6, Math.ceil(required / 2));
+}
+
+export function plural(n: number, word: string) {
+  return `${n} ${word}${Math.abs(n) > 1 ? "s" : ""}`;
+}
+
+export function ruleLabel(s: StampConfig) {
+  if (s.rule === "amount") return `1 tampon par tranche de ${formatEuros(s.amountPerStamp * 100)}`;
+  if (s.rule === "quantity") return `1 tampon par ${s.unitLabel}`;
+  return s.minAmount > 0 ? `1 tampon par commande dès ${formatEuros(s.minAmount * 100)}` : "1 tampon par passage";
 }
 
 export function formatEuros(cents: number) {
@@ -27,30 +57,3 @@ export function renderTemplate(tpl: string, vars: Record<string, string | number
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || name;
 }
-
-export type VisitGain = { points: number; stamps: number; cashbackCents: number };
-
-/** Calcule le gain d'un passage selon les réglages du programme, la promo et le niveau du client. */
-export function computeVisitGain(
-  s: Pick<Settings, "points" | "stamps" | "cashback">,
-  opts: { amountCents: number; extraPoints: number; promoMultiplier: number; tierMultiplier: number }
-): VisitGain {
-  const mult = opts.promoMultiplier * opts.tierMultiplier;
-  const basePoints = s.points.enabled ? Math.floor((opts.amountCents / 100) * s.points.perEuro) : 0;
-  const points = Math.max(0, Math.round((basePoints + opts.extraPoints) * mult));
-  const stamps =
-    s.stamps.enabled && opts.amountCents > 0 && opts.amountCents >= Math.round(s.stamps.minAmount * 100)
-      ? Math.max(1, Math.floor(opts.promoMultiplier))
-      : 0;
-  const cashbackCents = s.cashback.enabled ? Math.round((opts.amountCents * s.cashback.percent * mult) / 100) : 0;
-  return { points, stamps, cashbackCents };
-}
-
-export function describeGain(g: VisitGain) {
-  const parts: string[] = [];
-  if (g.points) parts.push(`+${g.points} point${g.points > 1 ? "s" : ""}`);
-  if (g.stamps) parts.push(`+${g.stamps} tampon${g.stamps > 1 ? "s" : ""}`);
-  if (g.cashbackCents) parts.push(`+${formatEuros(g.cashbackCents)} de cashback`);
-  return parts.join(" · ");
-}
-

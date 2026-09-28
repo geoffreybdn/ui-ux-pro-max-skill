@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Cake, Coins, Crown, Gift, Save, Settings2, Stamp, Users } from "lucide-react";
+import { Bell, Cake, Save, Settings2, Stamp, Users } from "lucide-react";
 import { api } from "@/components/useApi";
 import type { NotificationKey, Settings } from "@/lib/settings";
+import { ruleLabel, stampCols } from "@/lib/program";
 
 type Info = Record<NotificationKey, { label: string; when: string; vars: string }>;
 
@@ -29,17 +30,28 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (b: 
   );
 }
 
+const RULES: { value: Settings["stamps"]["rule"]; title: string; text: string }[] = [
+  { value: "visit", title: "1 tampon par passage", text: "Simple : chaque commande donne un tampon (avec un minimum d'achat si vous voulez)." },
+  { value: "amount", title: "1 tampon par tranche de X €", text: "Ex. 1 tampon tous les 10 € : une commande de 25 € donne 2 tampons." },
+  { value: "quantity", title: "1 tampon par produit", text: "L'équipe saisit le nombre de produits (ex. 3 pizzas = 3 tampons)." },
+];
+
 export function ProgramForm({ initial, info }: { initial: Settings; info: Info }) {
   const [s, setS] = useState<Settings>(initial);
   const [msg, setMsg] = useState<{ kind: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Mise à jour immuable d'un chemin (ex. set("stamps", "required", 8))
   function set<K extends keyof Settings>(key: K, value: Settings[K]) {
     setS((prev) => ({ ...prev, [key]: value }));
   }
-  function setIn<K extends keyof Settings, F extends keyof Settings[K]>(key: K, field: F, value: Settings[K][F]) {
-    setS((prev) => ({ ...prev, [key]: { ...(prev[key] as object), [field]: value } }));
+  function setStamp<F extends keyof Settings["stamps"]>(field: F, value: Settings["stamps"][F]) {
+    setS((prev) => ({ ...prev, stamps: { ...prev.stamps, [field]: value } }));
+  }
+  function setRef<F extends keyof Settings["referral"]>(field: F, value: Settings["referral"][F]) {
+    setS((prev) => ({ ...prev, referral: { ...prev.referral, [field]: value } }));
+  }
+  function setNotif(k: NotificationKey, patch: Partial<Settings["notifications"][NotificationKey]>) {
+    setS((prev) => ({ ...prev, notifications: { ...prev.notifications, [k]: { ...prev.notifications[k], ...patch } } }));
   }
 
   async function save() {
@@ -48,7 +60,7 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
     try {
       const r = await api<{ settings: Settings }>("/api/admin/settings", { method: "PUT", body: { settings: s } });
       setS(r.settings);
-      setMsg({ kind: "success", text: "Programme enregistré ✔ — les changements s'appliquent immédiatement." });
+      setMsg({ kind: "success", text: "Carte enregistrée ✔ — les changements s'appliquent immédiatement." });
     } catch (err) {
       setMsg({ kind: "error", text: (err as Error).message });
     } finally {
@@ -56,131 +68,109 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
     }
   }
 
-  const levels = s.tiers.levels;
+  const req = Math.min(Math.max(s.stamps.required || 2, 2), 50);
 
   return (
     <div className="stack" style={{ paddingBottom: 80 }}>
-      <h1>Programme de fidélité</h1>
-      <p className="muted">Choisissez comment vos clients sont récompensés. Vous pouvez combiner points, tampons et cashback.</p>
+      <h1>Carte à tampons</h1>
+      <p className="muted">Paramétrez votre carte de fidélité. Aperçu en direct ci-dessous.</p>
 
-      <section className="card stack">
+      <section className="panel program-preview" aria-label="Aperçu de la carte">
+        <div>
+          <div className="small muted">Aperçu client</div>
+          <h2 style={{ margin: "4px 0" }}>{req} tampons = {s.stamps.reward}</h2>
+          <p className="small muted" style={{ margin: 0 }}>{ruleLabel(s.stamps)}{s.stamps.maxPerVisit > 0 ? ` · max ${s.stamps.maxPerVisit} par passage` : ""}</p>
+        </div>
+        <div className="stamp-grid" style={{ gridTemplateColumns: `repeat(${stampCols(req)}, 1fr)` }}>
+          {Array.from({ length: req }, (_, i) => (
+            <span key={i} className={`stamp ${i < Math.min(3, req - 1) ? "stamp-on" : ""} ${i === req - 1 ? "stamp-gift" : ""}`}>
+              {i === req - 1 ? "🎁" : i < 3 ? "🍕" : ""}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel stack">
         <h2><Settings2 size={20} style={{ verticalAlign: "-3px" }} /> Général</h2>
         <label>Nom de la pizzeria<input className="input" value={s.pizzeriaName} onChange={(e) => set("pizzeriaName", e.target.value)} /></label>
       </section>
 
-      <section className={`card stack ${s.points.enabled ? "" : "section-off"}`}>
-        <div className="row between">
-          <h2 style={{ margin: 0 }}><Gift size={20} style={{ verticalAlign: "-3px" }} /> Points</h2>
-          <Switch checked={s.points.enabled} onChange={(v) => setIn("points", "enabled", v)} label="Activé" />
-        </div>
+      <section className="panel stack">
+        <h2><Stamp size={20} style={{ verticalAlign: "-3px" }} /> La carte</h2>
         <div className="grid">
-          <Num label="Points par euro" value={s.points.perEuro} step={0.5} onChange={(v) => setIn("points", "perEuro", v)} />
-          <Num label="Alerte « récompense proche »" hint="(0 = désactivée)" value={s.nearRewardPoints} onChange={(v) => set("nearRewardPoints", v)} suffix="points avant" />
+          <Num label="Tampons pour la récompense" value={s.stamps.required} min={2} onChange={(v) => setStamp("required", v)} />
+          <label>Récompense<input className="input" value={s.stamps.reward} onChange={(e) => setStamp("reward", e.target.value)} placeholder="Pizza offerte" /></label>
         </div>
-        <p className="small muted" style={{ margin: 0 }}>Les récompenses échangeables se gèrent dans <a href="/admin/recompenses">Récompenses</a>.</p>
-      </section>
 
-      <section className={`card stack ${s.stamps.enabled ? "" : "section-off"}`}>
-        <div className="row between">
-          <h2 style={{ margin: 0 }}><Stamp size={20} style={{ verticalAlign: "-3px" }} /> Carte à tampons</h2>
-          <Switch checked={s.stamps.enabled} onChange={(v) => setIn("stamps", "enabled", v)} label="Activée" />
-        </div>
-        <div className="grid">
-          <Num label="Tampons pour la récompense" value={s.stamps.required} min={2} onChange={(v) => setIn("stamps", "required", v)} />
-          <Num label="Commande minimum" value={s.stamps.minAmount} step={0.5} onChange={(v) => setIn("stamps", "minAmount", v)} suffix="€ / tampon" />
-          <label>Récompense<input className="input" value={s.stamps.reward} onChange={(e) => setIn("stamps", "reward", e.target.value)} /></label>
-        </div>
-        <p className="small muted" style={{ margin: 0 }}>1 tampon par commande (2 pendant une promo x2).</p>
-      </section>
-
-      <section className={`card stack ${s.cashback.enabled ? "" : "section-off"}`}>
-        <div className="row between">
-          <h2 style={{ margin: 0 }}><Coins size={20} style={{ verticalAlign: "-3px" }} /> Cashback</h2>
-          <Switch checked={s.cashback.enabled} onChange={(v) => setIn("cashback", "enabled", v)} label="Activé" />
-        </div>
-        <div className="grid">
-          <Num label="Pourcentage reversé" value={s.cashback.percent} step={0.5} onChange={(v) => setIn("cashback", "percent", v)} suffix="%" />
-          <Num label="Utilisable à partir de" value={s.cashback.minRedeem} step={0.5} onChange={(v) => setIn("cashback", "minRedeem", v)} suffix="€" />
-        </div>
-      </section>
-
-      <section className={`card stack ${s.tiers.enabled ? "" : "section-off"}`}>
-        <div className="row between">
-          <h2 style={{ margin: 0 }}><Crown size={20} style={{ verticalAlign: "-3px" }} /> Niveaux VIP</h2>
-          <Switch checked={s.tiers.enabled} onChange={(v) => setIn("tiers", "enabled", v)} label="Activés" />
-        </div>
-        <p className="small muted" style={{ margin: 0 }}>Basés sur le total de points cumulés. Le multiplicateur s&apos;applique aux points et au cashback.</p>
-        {levels.map((t, i) => (
-          <div className="grid" key={i} style={{ alignItems: "end" }}>
-            <label>Niveau {i + 1}
-              <input className="input" value={t.name} onChange={(e) => setIn("tiers", "levels", levels.map((l, j) => (j === i ? { ...l, name: e.target.value } : l)))} />
+        <fieldset className="rule-choices">
+          <legend>Comment gagner un tampon ?</legend>
+          {RULES.map((r) => (
+            <label key={r.value} className={`rule-choice ${s.stamps.rule === r.value ? "is-selected" : ""}`}>
+              <input type="radio" name="rule" checked={s.stamps.rule === r.value} onChange={() => setStamp("rule", r.value)} />
+              <span><b>{r.title}</b><span className="small muted">{r.text}</span></span>
             </label>
-            <Num label="À partir de" value={t.min} suffix="pts cumulés" onChange={(v) => setIn("tiers", "levels", levels.map((l, j) => (j === i ? { ...l, min: i === 0 ? 0 : v } : l)))} />
-            <Num label="Multiplicateur" value={t.multiplier} step={0.05} min={1} onChange={(v) => setIn("tiers", "levels", levels.map((l, j) => (j === i ? { ...l, multiplier: v } : l)))} />
-            <div className="row">
-              {i > 0 && (
-                <button type="button" className="btn btn-sm" onClick={() => setIn("tiers", "levels", levels.filter((_, j) => j !== i))}>Supprimer</button>
-              )}
-            </div>
-          </div>
-        ))}
-        {levels.length < 5 && (
-          <button
-            type="button"
-            className="btn btn-sm"
-            style={{ width: "fit-content" }}
-            onClick={() => setIn("tiers", "levels", [...levels, { name: "Platine", min: (levels.at(-1)?.min ?? 0) + 500, multiplier: 1.5 }])}
-          >
-            + Ajouter un niveau
-          </button>
-        )}
+          ))}
+        </fieldset>
+
+        <div className="grid">
+          {s.stamps.rule === "visit" && (
+            <Num label="Commande minimum" hint="(0 = aucune)" value={s.stamps.minAmount} step={0.5} onChange={(v) => setStamp("minAmount", v)} suffix="€" />
+          )}
+          {s.stamps.rule === "amount" && (
+            <Num label="1 tampon tous les" value={s.stamps.amountPerStamp} step={0.5} min={1} onChange={(v) => setStamp("amountPerStamp", v)} suffix="€" />
+          )}
+          {s.stamps.rule === "quantity" && (
+            <label>Nom du produit <span className="hint">(au singulier)</span>
+              <input className="input" value={s.stamps.unitLabel} onChange={(e) => setStamp("unitLabel", e.target.value)} placeholder="pizza" />
+            </label>
+          )}
+          <Num label="Maximum par passage" hint="(0 = illimité)" value={s.stamps.maxPerVisit} onChange={(v) => setStamp("maxPerVisit", v)} suffix="tampons" />
+        </div>
+        <p className="small muted" style={{ margin: 0 }}>Pendant une promo « tampons doublés », le nombre de tampons est multiplié automatiquement.</p>
       </section>
 
-      <section className="card stack">
-        <h2><Cake size={20} style={{ verticalAlign: "-3px" }} /> Bonus automatiques</h2>
+      <section className="panel stack">
+        <h2><Cake size={20} style={{ verticalAlign: "-3px" }} /> Tampons offerts</h2>
         <div className="grid">
-          <Num label="Bienvenue (à l'inscription)" value={s.welcomeBonus} suffix="points" onChange={(v) => set("welcomeBonus", v)} />
-          <Num label="Anniversaire" value={s.birthdayBonus} suffix="points" onChange={(v) => set("birthdayBonus", v)} />
-          <Num label="Relance après" value={s.inactivityDays} min={7} suffix="jours sans visite" onChange={(v) => set("inactivityDays", v)} />
+          <Num label="À l'inscription" value={s.welcomeStamps} suffix="tampons" onChange={(v) => set("welcomeStamps", v)} />
+          <Num label="Le jour de l'anniversaire" value={s.birthdayStamps} suffix="tampons" onChange={(v) => set("birthdayStamps", v)} />
         </div>
       </section>
 
-      <section className={`card stack ${s.referral.enabled ? "" : "section-off"}`}>
+      <section className={`panel stack ${s.referral.enabled ? "" : "section-off"}`}>
         <div className="row between">
           <h2 style={{ margin: 0 }}><Users size={20} style={{ verticalAlign: "-3px" }} /> Parrainage</h2>
-          <Switch checked={s.referral.enabled} onChange={(v) => setIn("referral", "enabled", v)} label="Activé" />
+          <Switch checked={s.referral.enabled} onChange={(v) => setRef("enabled", v)} label="Activé" />
         </div>
         <div className="grid">
-          <Num label="Pour le parrain" value={s.referral.referrerBonus} suffix="points" onChange={(v) => setIn("referral", "referrerBonus", v)} />
-          <Num label="Pour le filleul" value={s.referral.refereeBonus} suffix="points" onChange={(v) => setIn("referral", "refereeBonus", v)} />
+          <Num label="Pour le parrain" value={s.referral.referrerStamps} suffix="tampons" onChange={(v) => setRef("referrerStamps", v)} />
+          <Num label="Pour le filleul" value={s.referral.refereeStamps} suffix="tampons" onChange={(v) => setRef("refereeStamps", v)} />
         </div>
         <p className="small muted" style={{ margin: 0 }}>Le filleul saisit le code carte de son parrain (ex. PZ-AB12CD34) à l&apos;inscription.</p>
       </section>
 
-      <section className="card stack" id="notifications">
+      <section className="panel stack" id="notifications">
         <h2><Bell size={20} style={{ verticalAlign: "-3px" }} /> Notifications automatiques</h2>
+        <div className="grid">
+          <Num label="Prévenir quand il reste" hint="(0 = jamais)" value={s.nearRewardStamps} suffix="tampon(s)" onChange={(v) => set("nearRewardStamps", v)} />
+          <Num label="Relancer après" value={s.inactivityDays} min={7} suffix="jours sans visite" onChange={(v) => set("inactivityDays", v)} />
+        </div>
         <p className="small muted" style={{ margin: 0 }}>
-          Variables utilisables : {"{prenom}"} {"{solde}"} {"{gain}"} {"{recompense}"} {"{reste}"} {"{bonus}"} {"{niveau}"} {"{filleul}"}
+          Variables : {"{prenom}"} {"{tampons}"} {"{total}"} {"{reste}"} {"{gain}"} {"{recompense}"} {"{bonus}"} {"{filleul}"}
         </p>
         {(Object.keys(info) as NotificationKey[]).map((k) => (
           <div className="stack tpl-row" key={k} style={{ gap: 8 }}>
             <div className="row between">
-              <Switch
-                checked={s.notifications[k].enabled}
-                onChange={(v) => set("notifications", { ...s.notifications, [k]: { ...s.notifications[k], enabled: v } })}
-                label={info[k].label}
-              />
+              <Switch checked={s.notifications[k].enabled} onChange={(v) => setNotif(k, { enabled: v })} label={info[k].label} />
               <span className="small muted">{info[k].when}</span>
             </div>
             {k !== "promo" && s.notifications[k].enabled && (
               <div className="grid">
                 <label>Titre <span className="hint">{info[k].vars}</span>
-                  <input className="input" value={s.notifications[k].title}
-                    onChange={(e) => set("notifications", { ...s.notifications, [k]: { ...s.notifications[k], title: e.target.value } })} />
+                  <input className="input" value={s.notifications[k].title} onChange={(e) => setNotif(k, { title: e.target.value })} />
                 </label>
                 <label>Message
-                  <input className="input" value={s.notifications[k].body}
-                    onChange={(e) => set("notifications", { ...s.notifications, [k]: { ...s.notifications[k], body: e.target.value } })} />
+                  <input className="input" value={s.notifications[k].body} onChange={(e) => setNotif(k, { body: e.target.value })} />
                 </label>
               </div>
             )}
@@ -191,7 +181,7 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
       <div className="save-bar">
         {msg && <div className={`alert alert-${msg.kind} small`}>{msg.text}</div>}
         <button className="btn btn-primary btn-block" onClick={save} disabled={busy}>
-          <Save size={18} /> {busy ? "Enregistrement…" : "Enregistrer le programme"}
+          <Save size={18} /> {busy ? "Enregistrement…" : "Enregistrer la carte"}
         </button>
       </div>
     </div>

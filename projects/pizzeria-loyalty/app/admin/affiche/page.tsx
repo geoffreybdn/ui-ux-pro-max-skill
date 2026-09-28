@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { requireAdminPage } from "@/lib/auth";
-import { getSettings, formatEuros } from "@/lib/settings";
+import { getSettings, plural, ruleLabel } from "@/lib/settings";
 import { PrintButton, CopyLink } from "./Actions";
 
 export const metadata = { title: "QR codes d'inscription" };
@@ -17,11 +17,10 @@ export default async function Page() {
   const qr = await QRCode.toDataURL(qrUrl, { margin: 1, width: 600, errorCorrectionLevel: "M" });
 
   const perks = [
-    s.welcomeBonus > 0 && `${s.welcomeBonus} points offerts à l'inscription`,
-    s.stamps.enabled && `${s.stamps.required} tampons = ${s.stamps.reward}`,
-    s.points.enabled && `${s.points.perEuro} point${s.points.perEuro > 1 ? "s" : ""} par euro dépensé`,
-    s.cashback.enabled && `${s.cashback.percent} % de cashback`,
-    s.birthdayBonus > 0 && "Un cadeau pour votre anniversaire",
+    `${s.stamps.required} tampons = ${s.stamps.reward}`,
+    ruleLabel(s.stamps),
+    s.welcomeStamps > 0 && `${plural(s.welcomeStamps, "tampon")} offert(s) à l'inscription`,
+    s.birthdayStamps > 0 && "Un cadeau pour votre anniversaire",
   ].filter(Boolean) as string[];
 
   return (
@@ -40,16 +39,13 @@ export default async function Page() {
         <p className="poster-lead">Scannez, inscrivez-vous en 30 secondes et cumulez à chaque visite 🍕</p>
         <img src={qr} alt="QR code vers la page d'inscription" className="poster-qr" />
         <ul className="poster-perks">{perks.map((p) => <li key={p}>{p}</li>)}</ul>
-        {s.cashback.enabled && s.cashback.minRedeem > 0 && (
-          <p className="small muted">Cashback utilisable dès {formatEuros(s.cashback.minRedeem * 100)}.</p>
-        )}
       </section>
 
       <section className="panel no-print stack">
         <h2>Liens à partager</h2>
         <CopyLink label="Réseaux sociaux (Instagram, Facebook…)" url={socialUrl} />
         <CopyLink label="QR code magasin" url={qrUrl} />
-        <p className="small muted">Pour un code avec des points offerts, créez-le dans <a href="/admin/codes">Codes d&apos;inscription</a>.</p>
+        <p className="small muted">Pour un code avec des tampons offerts, créez-le dans <a href="/admin/codes">Codes d&apos;inscription</a>.</p>
       </section>
     </div>
   );

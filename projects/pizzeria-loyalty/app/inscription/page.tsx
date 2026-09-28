@@ -10,7 +10,7 @@ export default function Page() {
       <TopBar />
       <main className="container narrow page">
         <h1>Créer ma carte</h1>
-        <p className="muted">Déjà client avec l&apos;ancienne carte ? Utilisez la même adresse e-mail pour récupérer vos points.</p>
+        <p className="muted">Déjà client avec l&apos;ancienne carte ? Utilisez la même adresse e-mail pour récupérer vos tampons.</p>
         <Suspense>
           <RegisterForm />
         </Suspense>

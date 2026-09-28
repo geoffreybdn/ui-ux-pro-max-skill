@@ -92,7 +92,7 @@ export function PushToggle() {
     </button>
   ) : (
     <button className="btn btn-gold btn-block" onClick={enable} disabled={busy}>
-      <Bell size={18} /> Activer les notifications (promos & points)
+      <Bell size={18} /> Activer les notifications (promos & tampons)
     </button>
   );
 }

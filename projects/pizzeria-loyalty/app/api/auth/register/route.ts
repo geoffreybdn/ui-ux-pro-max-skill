@@ -4,7 +4,7 @@ import { sql } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { handle, bad } from "@/lib/api";
 import { adminEmails, normalizeEmail } from "@/lib/config";
-import { claimLegacyPoints, creditBonus, generateCardCode, parseCardCode } from "@/lib/loyalty";
+import { claimLegacyStamps, creditStamps, generateCardCode, parseCardCode } from "@/lib/loyalty";
 import { notify } from "@/lib/notify";
 import { firstName, getSettings } from "@/lib/settings";
 
@@ -80,9 +80,9 @@ export const POST = handle(async (req: Request) => {
   if (!customer) bad("Inscription impossible, réessayez", 500);
 
   let bonus = 0;
-  if (settings.welcomeBonus > 0) {
-    await creditBonus(customer.id, "welcome", settings.welcomeBonus, "Cadeau de bienvenue");
-    bonus += settings.welcomeBonus;
+  if (settings.welcomeStamps > 0) {
+    await creditStamps(customer.id, "welcome", settings.welcomeStamps, "Cadeau de bienvenue");
+    bonus += settings.welcomeStamps;
   }
 
   if (signupCode) {
@@ -93,21 +93,21 @@ export const POST = handle(async (req: Request) => {
       returning bonus_points`;
     if (used) {
       await sql`update customers set signup_code_id = ${signupCode.id} where id = ${customer.id}`;
-      if (await creditBonus(customer.id, "bonus", used.bonus_points, `Bonus code ${code}`)) bonus += used.bonus_points;
+      if (await creditStamps(customer.id, "bonus", used.bonus_points, `Code ${code}`)) bonus += used.bonus_points;
     }
   }
 
   if (referrer) {
-    const { refereeBonus, referrerBonus } = settings.referral;
-    if (await creditBonus(customer.id, "referral", refereeBonus, `Parrainé par ${referrer.name}`)) bonus += refereeBonus;
-    if (referrerBonus > 0) {
-      await creditBonus(referrer.id, "referral", referrerBonus, `Parrainage de ${name}`);
-      await notify(referrer.id, "referral", { prenom: firstName(referrer.name), filleul: firstName(name), bonus: referrerBonus });
+    const { refereeStamps, referrerStamps } = settings.referral;
+    if (await creditStamps(customer.id, "referral", refereeStamps, `Parrainé par ${referrer.name}`)) bonus += refereeStamps;
+    if (referrerStamps > 0) {
+      await creditStamps(referrer.id, "referral", referrerStamps, `Parrainage de ${name}`);
+      await notify(referrer.id, "referral", { prenom: firstName(referrer.name), filleul: firstName(name), bonus: referrerStamps });
     }
   }
 
-  // Récupération automatique des points de l'ancienne carte (import CSV)
-  const [legacy] = await claimLegacyPoints([email]);
+  // Récupération automatique des tampons de l'ancienne carte (import CSV)
+  const [legacy] = await claimLegacyStamps([email]);
   if (legacy && !referrer && !signupCode) await sql`update customers set signup_source = 'ancienne_carte' where id = ${customer.id}`;
 
   await createSession(customer.id);

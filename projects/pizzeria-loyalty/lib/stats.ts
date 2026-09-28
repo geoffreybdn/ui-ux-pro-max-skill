@@ -7,7 +7,7 @@ export function parsePeriod(v: string | undefined): PeriodKey {
   return v && v in PERIODS ? (v as PeriodKey) : "30";
 }
 
-const REWARD_TYPES = ["redeem", "stamp_reward", "cashback_use"];
+const REWARD_TYPES = ["stamp_reward"];
 
 export type Kpi = { value: number; change: number | null; series: number[] };
 
@@ -34,8 +34,8 @@ export async function getKpis(period: PeriodKey) {
         (select count(*)::int from customers, p where role = 'customer' and created_at >= p.cur) as new_cur,
         (select count(distinct customer_id)::int from transactions, p where type = 'earn' and created_at >= p.cur) as active_cur,
         (select count(distinct customer_id)::int from transactions, p where type = 'earn' and created_at >= p.prev and created_at < p.cur) as active_prev,
-        (select count(*)::int from transactions, p where type = 'earn' and created_at >= p.cur) as visits_cur,
-        (select count(*)::int from transactions, p where type = 'earn' and created_at >= p.prev and created_at < p.cur) as visits_prev,
+        (select coalesce(sum(stamps), 0)::int from transactions, p where type = 'earn' and created_at >= p.cur) as visits_cur,
+        (select coalesce(sum(stamps), 0)::int from transactions, p where type = 'earn' and created_at >= p.prev and created_at < p.cur) as visits_prev,
         (select count(*)::int from transactions, p where type = any(${REWARD_TYPES}) and created_at >= p.cur) as rewards_cur,
         (select count(*)::int from transactions, p where type = any(${REWARD_TYPES}) and created_at >= p.prev and created_at < p.cur) as rewards_prev`,
     sql<{ registered: number; active: number; visits: number; rewards: number }>`
@@ -45,14 +45,14 @@ export async function getKpis(period: PeriodKey) {
           date_trunc(${unit}, now() at time zone 'Europe/Paris'),
           ('1 ' || ${unit})::interval) as t
       ), x as (
-        select type, customer_id, date_trunc(${unit}, created_at at time zone 'Europe/Paris') as t
+        select type, customer_id, stamps, date_trunc(${unit}, created_at at time zone 'Europe/Paris') as t
         from transactions where created_at >= now() - make_interval(days => ${days + 31})
       )
       select
         (select count(*)::int from customers c where c.role = 'customer'
            and date_trunc(${unit}, c.created_at at time zone 'Europe/Paris') <= b.t) as registered,
         (select count(distinct customer_id)::int from x where x.type = 'earn' and x.t = b.t) as active,
-        (select count(*)::int from x where x.type = 'earn' and x.t = b.t) as visits,
+        (select coalesce(sum(stamps), 0)::int from x where x.type = 'earn' and x.t = b.t) as visits,
         (select count(*)::int from x where x.type = any(${REWARD_TYPES}) and x.t = b.t) as rewards
       from b order by b.t`,
   ]);
@@ -136,20 +136,33 @@ export async function getDevices() {
 }
 
 export async function getTopCustomers() {
-  return sql<{ id: number; name: string; lifetime_points: number; visits: number }>`
-    select c.id, c.name, c.lifetime_points,
-           (select count(*)::int from transactions t where t.customer_id = c.id and t.type = 'earn') as visits
-    from customers c where c.role = 'customer'
-    order by c.lifetime_points desc, c.created_at asc limit 5`;
+  return sql<{ id: number; name: string; total: number; rewards: number }>`
+    select c.id, c.name,
+           coalesce(sum(t.stamps) filter (where t.stamps > 0), 0)::int as total,
+           count(*) filter (where t.type = 'stamp_reward')::int as rewards
+    from customers c left join transactions t on t.customer_id = c.id
+    where c.role = 'customer'
+    group by c.id
+    order by total desc, c.created_at asc limit 5`;
 }
 
-export async function getTopRewards(period: PeriodKey) {
-  return sql<{ label: string; count: number }>`
-    select case type when 'cashback_use' then 'Cashback utilisé' else coalesce(note, 'Récompense') end as label,
-           count(*)::int as count
-    from transactions
-    where type = any(${REWARD_TYPES}) and created_at >= now() - make_interval(days => ${Number(period)})
-    group by 1 order by 2 desc limit 5`;
+/** Où en sont les cartes : clients par niveau de remplissage de la carte en cours. */
+export async function getCardProgress(required: number) {
+  const [r] = await sql<{ full: number; q4: number; q3: number; q2: number; q1: number }>`
+    select
+      count(*) filter (where stamps >= ${required})::int as full,
+      count(*) filter (where stamps < ${required} and stamps >= ceil(${required} * 0.75))::int as q4,
+      count(*) filter (where stamps < ceil(${required} * 0.75) and stamps >= ceil(${required} * 0.5))::int as q3,
+      count(*) filter (where stamps < ceil(${required} * 0.5) and stamps >= 1)::int as q2,
+      count(*) filter (where stamps = 0)::int as q1
+    from customers where role = 'customer'`;
+  return [
+    { label: "Carte complète (cadeau à offrir)", value: r.full },
+    { label: "Presque pleine (≥ 75 %)", value: r.q4 },
+    { label: "À moitié (50–75 %)", value: r.q3 },
+    { label: "Commencée (< 50 %)", value: r.q2 },
+    { label: "Aucun tampon", value: r.q1 },
+  ];
 }
 
 export async function getRecentCampaigns() {
@@ -167,19 +180,13 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
     (select 't' || t.id, c.name, t.type, t.points, t.stamps, t.cashback_cents, t.note, t.created_at
        from transactions t join customers c on c.id = t.customer_id order by t.created_at desc limit 6)
     order by at desc limit 6`;
+  const LABELS: Record<string, string> = { welcome: "bienvenue", birthday: "anniversaire", referral: "parrainage", bonus: "code", import: "ancienne carte", adjust: "correction" };
   return rows.map((r) => {
-    let label = "";
-    let kind: ActivityItem["kind"] = "earn";
-    if (r.type === "signup") [label, kind] = ["Nouveau client", "new"];
-    else if (["redeem", "stamp_reward"].includes(r.type)) [label, kind] = [`A utilisé : ${r.note ?? "une récompense"}`, "reward"];
-    else if (r.type === "cashback_use") [label, kind] = ["A utilisé son cashback", "reward"];
-    else if (r.type === "earn") {
-      const parts = [];
-      if (r.points) parts.push(`+${r.points} pts`);
-      if (r.stamps) parts.push(`+${r.stamps} tampon${r.stamps > 1 ? "s" : ""}`);
-      if (r.cashback_cents) parts.push(`+${(r.cashback_cents / 100).toFixed(2).replace(".", ",")} €`);
-      label = parts.join(" · ") || "Visite";
-    } else [label, kind] = [`${r.points > 0 ? "+" : ""}${r.points} pts · ${r.note ?? r.type}`, "bonus"];
-    return { key: r.key, name: r.name, label, kind, at: r.at };
+    const n = Math.abs(r.stamps);
+    const tampons = `${n} tampon${n > 1 ? "s" : ""}`;
+    if (r.type === "signup") return { key: r.key, name: r.name, label: "Nouveau client", kind: "new" as const, at: r.at };
+    if (r.type === "stamp_reward") return { key: r.key, name: r.name, label: `A reçu : ${r.note ?? "sa récompense"}`, kind: "reward" as const, at: r.at };
+    if (r.type === "earn") return { key: r.key, name: r.name, label: `+${tampons}`, kind: "earn" as const, at: r.at };
+    return { key: r.key, name: r.name, label: `${r.stamps < 0 ? "−" : "+"}${tampons} · ${LABELS[r.type] ?? r.type}`, kind: "bonus" as const, at: r.at };
   });
 }

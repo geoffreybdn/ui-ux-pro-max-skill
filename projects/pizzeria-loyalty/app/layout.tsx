@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { pizzeriaName } = await getSettings();
   return {
     title: { default: `${pizzeriaName} — Fidélité`, template: `%s · ${pizzeriaName}` },
-    description: "Cumulez des points et des tampons à chaque pizza et profitez de nos promotions.",
+    description: "Cumulez des tampons à chaque visite et profitez de nos promotions.",
     icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
     appleWebApp: { capable: true, title: pizzeriaName, statusBarStyle: "default" },
   };

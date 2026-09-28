@@ -8,7 +8,7 @@ type Code = { id: number; code: string; bonus_points: number; max_uses: number |
 
 export function Codes() {
   const [codes, setCodes] = useState<Code[]>([]);
-  const [form, setForm] = useState({ code: "", bonusPoints: "20", maxUses: "", expiresAt: "" });
+  const [form, setForm] = useState({ code: "", bonusPoints: "1", maxUses: "", expiresAt: "" });
   const [msg, setMsg] = useState<{ kind: string; text: string } | null>(null);
 
   const load = () => api<{ codes: Code[] }>("/api/admin/codes").then((r) => setCodes(r.codes));
@@ -39,14 +39,14 @@ export function Codes() {
   return (
     <div className="stack">
       <h1>Codes d&apos;inscription</h1>
-      <p className="muted">Donnez un code en boutique (flyer, ticket, affiche) : le client le saisit à l&apos;inscription et reçoit des points de bienvenue.</p>
+      <p className="muted">Donnez un code en boutique (flyer, ticket, affiche) : le client le saisit à l&apos;inscription et reçoit des tampons offerts.</p>
       <form className="card stack" onSubmit={submit}>
         {msg && <div className={`alert alert-${msg.kind}`}>{msg.text}</div>}
         <div className="grid">
           <label>Code <span className="hint">(vide = généré)</span>
             <input className="input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="BIENVENUE" />
           </label>
-          <label>Points offerts<input className="input" type="number" min={0} value={form.bonusPoints} onChange={(e) => setForm({ ...form, bonusPoints: e.target.value })} /></label>
+          <label>Tampons offerts<input className="input" type="number" min={0} value={form.bonusPoints} onChange={(e) => setForm({ ...form, bonusPoints: e.target.value })} /></label>
           <label>Utilisations max <span className="hint">(vide = illimité)</span>
             <input className="input" type="number" min={1} value={form.maxUses} onChange={(e) => setForm({ ...form, maxUses: e.target.value })} />
           </label>
@@ -64,7 +64,7 @@ export function Codes() {
             {codes.map((c) => (
               <tr key={c.id} style={{ opacity: c.active ? 1 : 0.5 }}>
                 <td><b>{c.code}</b></td>
-                <td>+{c.bonus_points}</td>
+                <td>+{c.bonus_points} tampon{c.bonus_points > 1 ? "s" : ""}</td>
                 <td>{c.uses}{c.max_uses ? ` / ${c.max_uses}` : ""}</td>
                 <td className="small">{c.expires_at ? new Date(c.expires_at).toLocaleDateString("fr-FR") : "—"}</td>
                 <td className="row">

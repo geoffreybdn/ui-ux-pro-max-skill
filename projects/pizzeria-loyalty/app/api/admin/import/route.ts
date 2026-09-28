@@ -9,7 +9,7 @@ export const maxDuration = 60;
 
 // Noms de colonnes acceptés (insensible à la casse / aux accents)
 const EMAIL = ["email", "e-mail", "mail", "courriel", "adresse mail", "adresse email"];
-const POINTS = ["points", "point", "solde", "pts", "fidelite", "points fidelite"];
+const STAMPS = ["tampons", "tampon", "points", "point", "solde", "pts", "fidelite", "passages", "visites"];
 const NAME = ["nom", "name", "prenom", "client", "nom complet"];
 const PHONE = ["telephone", "tel", "phone", "portable", "mobile"];
 
@@ -30,11 +30,11 @@ export const POST = handle(async (req: Request) => {
   const headers = parsed.meta.fields ?? [];
   const find = (names: string[]) => headers.find((h) => names.includes(h));
   const emailCol = find(EMAIL);
-  const pointsCol = find(POINTS);
+  const pointsCol = find(STAMPS);
   const nameCol = find(NAME);
   const phoneCol = find(PHONE);
   if (!emailCol || !pointsCol) {
-    bad(`Colonnes "email" et "points" obligatoires. Colonnes trouvées : ${headers.join(", ") || "aucune"}`);
+    bad(`Colonnes "email" et "tampons" obligatoires. Colonnes trouvées : ${headers.join(", ") || "aucune"}`);
   }
 
   const byEmail = new Map<string, LegacyRow>();
@@ -47,14 +47,14 @@ export const POST = handle(async (req: Request) => {
       return;
     }
     if (!Number.isFinite(points)) {
-      errors.push(`Ligne ${i + 2} : points invalides "${r[pointsCol]}"`);
+      errors.push(`Ligne ${i + 2} : nombre de tampons invalide "${r[pointsCol]}"`);
       return;
     }
-    // En cas de doublon dans le fichier, on additionne les points
+    // En cas de doublon dans le fichier, on additionne les tampons
     const prev = byEmail.get(email);
     byEmail.set(email, {
       email,
-      points: (prev?.points ?? 0) + points,
+      stamps: (prev?.stamps ?? 0) + points,
       name: (nameCol && r[nameCol]?.trim()) || prev?.name || null,
       phone: (phoneCol && r[phoneCol]?.trim()) || prev?.phone || null,
     });
