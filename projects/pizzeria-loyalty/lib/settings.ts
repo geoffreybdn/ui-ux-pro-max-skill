@@ -3,7 +3,7 @@ import { sql } from "./db";
 import type { StampRule } from "./program";
 
 export type { StampRule };
-export { computeStamps, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
+export { computeStamps, applyPromo, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
 
 export const NOTIFICATION_KEYS = ["welcome", "visit", "stampNear", "stampComplete", "birthday", "referral", "inactivity", "promo"] as const;
 export type NotificationKey = (typeof NOTIFICATION_KEYS)[number];

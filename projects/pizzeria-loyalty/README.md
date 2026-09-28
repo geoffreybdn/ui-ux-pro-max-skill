@@ -18,8 +18,9 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil (anniversaire),
 installation sur l'écran d'accueil, accès hors connexion.
 
-Côté équipe : scanner caméra, ajout de tampons (aperçu avant validation), bouton « Offrir la récompense »,
-correction manuelle (admin), plusieurs admins / employés, tableau de bord (tampons distribués, cadeaux offerts,
+Côté équipe : scanner caméra, **ajouter ou retirer** des tampons (boutons rapides +1 à +5, sélecteur − / +,
+saisie manuelle ; promo et plafond appliqués automatiquement, chaque retrait tracé avec son auteur et un motif),
+bouton « Offrir la récompense », plusieurs admins / employés, tableau de bord (tampons distribués, cadeaux offerts,
 où en sont les cartes, origine des inscriptions…).
 
 ### Notifications automatiques (activables et modifiables une par une)

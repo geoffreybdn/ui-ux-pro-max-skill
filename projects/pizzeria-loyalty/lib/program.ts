@@ -23,6 +23,13 @@ export function computeStamps(
   return base > 0 ? Math.max(base, Math.floor(base * opts.promoMultiplier)) : 0;
 }
 
+/** Tampons réellement crédités pour un nombre choisi en caisse : plafond par passage puis promo. */
+export function applyPromo(s: StampConfig, count: number, promoMultiplier: number) {
+  let base = Math.max(0, Math.trunc(count));
+  if (s.maxPerVisit > 0) base = Math.min(base, s.maxPerVisit);
+  return base > 0 ? Math.max(base, Math.floor(base * promoMultiplier)) : 0;
+}
+
 /** Position sur la carte : récompenses disponibles + tampons de la carte en cours. */
 export function cardState(stamps: number, required: number) {
   const available = Math.floor(stamps / required);

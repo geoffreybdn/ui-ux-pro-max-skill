@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { sql, type Promotion } from "./db";
 import { broadcast, pushToCustomer } from "./push";
 import { notify, notifyEach } from "./notify";
-import { cardState, computeStamps, firstName, getSettings, plural } from "./settings";
+import { applyPromo, cardState, firstName, getSettings, plural } from "./settings";
 
 const CARD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I pour la saisie manuelle
 
@@ -41,19 +41,18 @@ async function notifyProgress(customerId: number, name: string, before: number, 
   }
 }
 
-/** Passage en caisse : calcule et crédite les tampons selon la règle du programme et la promo en cours. */
-export async function recordVisit(opts: { customerId: number; amountCents: number; quantity: number; staffId: number }) {
+/**
+ * Passage en caisse : crédite le nombre de tampons choisi par l'équipe
+ * (plafond par passage et promo en cours appliqués automatiquement).
+ */
+export async function recordVisit(opts: { customerId: number; count: number; amountCents?: number; staffId: number }) {
   const [s, promo] = await Promise.all([getSettings(), getActivePromotion()]);
   const [before] = await sql<{ name: string; stamps: number }>`select name, stamps from customers where id = ${opts.customerId}`;
   if (!before) throw new Error("Client introuvable");
 
   const promoMultiplier = promo ? Number(promo.multiplier) : 1;
-  const gained = computeStamps(s.stamps, { amountCents: opts.amountCents, quantity: opts.quantity, promoMultiplier });
-  if (gained <= 0) {
-    if (s.stamps.rule === "visit") throw new Error(`Commande minimum pour un tampon : ${s.stamps.minAmount} €`);
-    if (s.stamps.rule === "amount") throw new Error(`1 tampon par tranche de ${s.stamps.amountPerStamp} €`);
-    throw new Error(`Indiquez le nombre de ${s.stamps.unitLabel}s`);
-  }
+  const gained = applyPromo(s.stamps, opts.count, promoMultiplier);
+  if (gained <= 0) throw new Error("Choisissez au moins 1 tampon");
 
   const [after] = await sql<{ stamps: number }>`
     with tx as (
@@ -66,6 +65,7 @@ export async function recordVisit(opts: { customerId: number; amountCents: numbe
     returning c.stamps`;
 
   const st = cardState(after.stamps, s.stamps.required);
+  const capped = s.stamps.maxPerVisit > 0 && opts.count > s.stamps.maxPerVisit;
   const gain = `+${plural(gained, "tampon")}${promo ? ` (promo x${promoMultiplier})` : ""}`;
   await Promise.allSettled([
     notify(opts.customerId, "visit", {
@@ -74,7 +74,34 @@ export async function recordVisit(opts: { customerId: number; amountCents: numbe
     notifyProgress(opts.customerId, before.name, before.stamps, after.stamps),
   ]);
 
-  return { stamps: gained, stampsBalance: after.stamps, multiplier: promoMultiplier, promotion: promo?.title ?? null, summary: gain };
+  return {
+    stamps: gained,
+    stampsBalance: after.stamps,
+    multiplier: promoMultiplier,
+    promotion: promo?.title ?? null,
+    summary: gain + (capped ? ` — plafond de ${s.stamps.maxPerVisit} par passage appliqué` : ""),
+  };
+}
+
+/** Retire des tampons (erreur de saisie, annulation…). Jamais en dessous de zéro. */
+export async function removeStamps(opts: { customerId: number; count: number; staffId: number; note: string }) {
+  const count = Math.trunc(opts.count);
+  if (count <= 0) throw new Error("Choisissez au moins 1 tampon à retirer");
+  const [row] = await sql<{ stamps: number }>`
+    with upd as (
+      update customers set stamps = stamps - ${count}
+      where id = ${opts.customerId} and stamps >= ${count}
+      returning id, stamps
+    ), tx as (
+      insert into transactions (customer_id, type, points, stamps, staff_id, note)
+      select id, 'adjust', 0, ${-count}, ${opts.staffId}, ${opts.note} from upd
+    )
+    select stamps from upd`;
+  if (!row) {
+    const [c] = await sql<{ stamps: number }>`select stamps from customers where id = ${opts.customerId}`;
+    throw new Error(c ? `Impossible : le client n'a que ${plural(c.stamps, "tampon")}` : "Client introuvable");
+  }
+  return { stampsBalance: row.stamps, summary: `−${plural(count, "tampon")}` };
 }
 
 /** Offre la récompense d'une carte complète (retire `required` tampons). */
@@ -98,20 +125,6 @@ export async function redeemStampCard(opts: { customerId: number; staffId: numbe
     tag: "stamp",
   }).catch(() => 0);
   return { stampsBalance: row.stamps, reward: s.stamps.reward };
-}
-
-/** Correction manuelle (admin) : ajoute ou retire des tampons. */
-export async function adjustStamps(opts: { customerId: number; stamps: number; staffId: number; note: string }) {
-  const [row] = await sql<{ stamps: number }>`
-    with tx as (
-      insert into transactions (customer_id, type, points, stamps, staff_id, note)
-      values (${opts.customerId}, 'adjust', 0, ${opts.stamps}, ${opts.staffId}, ${opts.note})
-      returning customer_id
-    )
-    update customers c set stamps = greatest(0, c.stamps + ${opts.stamps})
-    from tx where c.id = tx.customer_id returning c.stamps`;
-  if (!row) throw new Error("Client introuvable");
-  return { stampsBalance: row.stamps };
 }
 
 /** Crédite des tampons offerts (bienvenue, anniversaire, parrainage, code…) et renvoie le nouveau solde. */
