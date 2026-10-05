@@ -8,9 +8,10 @@ import { importLegacyCustomers, type LegacyRow } from "@/lib/loyalty";
 export const maxDuration = 60;
 
 // Noms de colonnes acceptés (insensible à la casse / aux accents)
-const EMAIL = ["email", "e-mail", "mail", "courriel", "adresse mail", "adresse email"];
-const STAMPS = ["tampons", "tampon", "points", "point", "solde", "pts", "fidelite", "passages", "visites"];
-const NAME = ["nom", "name", "prenom", "client", "nom complet"];
+const EMAIL = ["email", "e-mail", "mail", "courriel", "adresse mail", "adresse email", "email/identifier", "identifier"];
+// « progress » : export CRM du type « 7 / 11 stamps » (seul le premier nombre est retenu)
+const STAMPS = ["tampons", "tampon", "points", "point", "solde", "pts", "fidelite", "progress", "progression", "stamps"];
+const NAME = ["nom", "name", "prenom", "client", "nom complet", "customer"];
 const PHONE = ["telephone", "tel", "phone", "portable", "mobile"];
 
 const clean = (s: string) =>
@@ -41,7 +42,9 @@ export const POST = handle(async (req: Request) => {
   const errors: string[] = [];
   parsed.data.forEach((r, i) => {
     const email = normalizeEmail(r[emailCol] || "");
-    const points = Math.trunc(Number(String(r[pointsCol] || "0").replace(/\s/g, "").replace(",", ".")));
+    const rawStamps = String(r[pointsCol] || "0").trim();
+    const leading = rawStamps.match(/^-?\d+(?:[.,]\d+)?/);
+    const points = leading ? Math.trunc(Number(leading[0].replace(",", "."))) : NaN;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push(`Ligne ${i + 2} : e-mail invalide "${r[emailCol] ?? ""}"`);
       return;

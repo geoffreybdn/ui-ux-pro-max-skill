@@ -54,7 +54,7 @@ export function Import() {
       <h1>Importer les anciens clients</h1>
       <div className="card stack">
         <p>
-          Importez le fichier CSV de votre ancienne carte de fidélité. Colonnes requises : <b>email</b> et <b>tampons</b>{" "}
+          Importez le fichier CSV de votre ancienne carte de fidélité. Colonnes requises : <b>email</b> et <b>tampons</b> (ou un export CRM avec « Progress : 7 / 11 stamps »){" "}
           (facultatif : <b>nom</b>, <b>telephone</b>). Séparateur <code>;</code> ou <code>,</code>.
         </p>
         <ul className="small" style={{ margin: 0 }}>
