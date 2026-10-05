@@ -170,6 +170,7 @@ export function Scanner({ isAdmin, card, promo }: Props) {
               <div>
                 <h2 style={{ margin: 0 }}>{customer.name}</h2>
                 <div className="small muted">{customer.email} · {customer.card_code}</div>
+                {customer.pending && <div className="small" style={{ color: "#b45309", fontWeight: 700 }}>Ancienne carte · pas encore inscrit dans l&apos;app</div>}
               </div>
               <span className="badge badge-hot">{shown}/{card.required}</span>
             </div>

@@ -8,8 +8,11 @@ import { adminEmails, normalizeEmail } from "@/lib/config";
 export const POST = handle(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
   const email = normalizeEmail(String(body.email || ""));
-  const [user] = await sql<{ id: number; role: string; password_hash: string }>`
-    select id, role, password_hash from customers where email = ${email}`;
+  const [user] = await sql<{ id: number; role: string; password_hash: string; pending: boolean }>`
+    select id, role, password_hash, pending from customers where email = ${email}`;
+  if (user?.pending) {
+    bad("Vos tampons de l'ancienne carte vous attendent : cliquez sur « S'inscrire » avec cet e-mail pour activer votre compte.", 401);
+  }
   if (!user || !(await bcrypt.compare(String(body.password || ""), user.password_hash))) {
     bad("E-mail ou mot de passe incorrect", 401);
   }

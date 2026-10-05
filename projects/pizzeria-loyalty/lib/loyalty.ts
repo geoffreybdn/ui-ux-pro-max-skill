@@ -175,6 +175,7 @@ export type LegacyRow = { email: string; name: string | null; phone: string | nu
 
 export async function importLegacyCustomers(rows: LegacyRow[]) {
   let credited: { id: number; stamps: number; credited: number }[] = [];
+  let created = 0;
   for (let i = 0; i < rows.length; i += 500) {
     const chunk = rows.slice(i, i + 500);
     const emails = chunk.map((r) => r.email);
@@ -186,6 +187,19 @@ export async function importLegacyCustomers(rows: LegacyRow[]) {
       on conflict (email) do update
         set name = excluded.name, phone = excluded.phone, points = excluded.points, imported_at = now()
         where legacy_customers.claimed_by is null`;
+    // Les clients pas encore inscrits deviennent des comptes « en attente » : visibles dans l'admin et au scanner.
+    const inserted = await sql<{ id: number }>`
+      insert into customers (email, name, phone, password_hash, card_code, pending, signup_source)
+      select l.email, coalesce(nullif(trim(l.name), ''), split_part(l.email, '@', 1)), nullif(l.phone, ''), '',
+             'PZ-' || (select string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 1 + floor(random() * 32)::int, 1), '')
+                       from generate_series(1, 8 + 0 * length(l.email))),
+             true, 'ancienne_carte'
+        from legacy_customers l
+       where l.email = any(${emails}) and l.claimed_by is null
+         and not exists (select 1 from customers c where c.email = l.email)
+      on conflict do nothing
+      returning id`;
+    created += inserted.length;
     credited = credited.concat(await claimLegacyStamps(emails));
   }
 
@@ -200,7 +214,7 @@ export async function importLegacyCustomers(rows: LegacyRow[]) {
         })
       )
   );
-  return { imported: rows.length, creditedAccounts: credited.length };
+  return { imported: rows.length, createdAccounts: created, creditedAccounts: credited.length - created };
 }
 
 /** Envoie la notification des promotions qui ont démarré et n'ont pas encore été annoncées. */

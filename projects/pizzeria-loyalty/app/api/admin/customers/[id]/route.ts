@@ -8,7 +8,7 @@ export const GET = handle(async (_req: Request, ctx: { params: Promise<{ id: str
   const id = Number((await ctx.params).id);
   const [customer] = await sql<Customer>`
     select id, email, name, phone, role, card_code, points, lifetime_points, stamps, cashback_cents,
-      to_char(birthdate, 'YYYY-MM-DD') as birthdate, last_visit_at, created_at
+      to_char(birthdate, 'YYYY-MM-DD') as birthdate, pending, last_visit_at, created_at
     from customers where id = ${id}`;
   if (!customer) bad("Client introuvable", 404);
   const history = await sql`

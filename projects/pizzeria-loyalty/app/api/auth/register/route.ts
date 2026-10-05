@@ -39,8 +39,9 @@ export const POST = handle(async (req: Request) => {
   if (name.length < 2) bad("Indiquez votre prénom");
   if (password.length < 8) bad("Le mot de passe doit contenir au moins 8 caractères");
 
-  const [existing] = await sql`select 1 from customers where email = ${email}`;
-  if (existing) bad("Un compte existe déjà avec cet e-mail. Connectez-vous.", 409);
+  const [existing] = await sql<{ id: number; pending: boolean; stamps: number }>`
+    select id, pending, stamps from customers where email = ${email}`;
+  if (existing && !existing.pending) bad("Un compte existe déjà avec cet e-mail. Connectez-vous.", 409);
 
   const settings = await getSettings();
 
@@ -64,6 +65,18 @@ export const POST = handle(async (req: Request) => {
   const hash = await bcrypt.hash(password, 10);
 
   let customer: { id: number } | undefined;
+  // Ancien client importé : on active son compte existant (tampons, historique et code carte conservés)
+  if (existing?.pending) {
+    [customer] = await sql<{ id: number }>`
+      update customers
+         set name = ${name}, phone = coalesce(${phone}, phone), password_hash = ${hash}, pending = false,
+             birthdate = coalesce(${birthdate}, birthdate), signup_device = ${device},
+             referred_by = ${referrer && referrer.id !== existing.id ? referrer.id : null},
+             role = case when ${role} = 'admin' then 'admin' else role end
+       where id = ${existing.id} and pending
+      returning id`;
+    if (!customer) bad("Un compte existe déjà avec cet e-mail. Connectez-vous.", 409);
+  }
   for (let attempt = 0; attempt < 3 && !customer; attempt++) {
     try {
       [customer] = await sql<{ id: number }>`
@@ -108,8 +121,8 @@ export const POST = handle(async (req: Request) => {
 
   // Récupération automatique des tampons de l'ancienne carte (import CSV)
   const [legacy] = await claimLegacyStamps([email]);
-  if (legacy && !referrer && !signupCode) await sql`update customers set signup_source = 'ancienne_carte' where id = ${customer.id}`;
+  if (legacy && !referrer && !signupCode && !existing) await sql`update customers set signup_source = 'ancienne_carte' where id = ${customer.id}`;
 
   await createSession(customer.id);
-  return NextResponse.json({ ok: true, bonus, legacyPoints: legacy?.credited ?? 0 });
+  return NextResponse.json({ ok: true, bonus, legacyPoints: existing?.pending ? existing.stamps : legacy?.credited ?? 0 });
 });

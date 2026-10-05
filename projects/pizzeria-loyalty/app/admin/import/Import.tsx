@@ -5,7 +5,7 @@ import { FileUp } from "lucide-react";
 import { api } from "@/components/useApi";
 
 type Preview = { preview: { email: string; name: string | null; stamps: number }[]; total: number; errors: string[] };
-type Result = { imported: number; creditedAccounts: number; errors: string[] };
+type Result = { imported: number; createdAccounts: number; creditedAccounts: number; errors: string[] };
 
 const SAMPLE = "email;nom;telephone;tampons\nmarie.dupont@example.com;Marie Dupont;0612345678;7\njean@example.com;Jean Martin;;3\n";
 
@@ -59,7 +59,7 @@ export function Import() {
         </p>
         <ul className="small" style={{ margin: 0 }}>
           <li>Client <b>déjà inscrit</b> avec cet e-mail : les tampons sont ajoutés immédiatement (+ notification).</li>
-          <li>Client <b>pas encore inscrit</b> : les tampons l&apos;attendent et sont crédités dès qu&apos;il crée son compte avec le même e-mail.</li>
+          <li>Client <b>pas encore inscrit</b> : son compte est créé avec ses tampons (visible dans Clients et au scanner) ; il l&apos;active en s&apos;inscrivant avec le même e-mail.</li>
           <li>Réimporter le même fichier ne crédite jamais deux fois.</li>
         </ul>
         <div className="row">
@@ -106,8 +106,8 @@ export function Import() {
 
       {result && (
         <div className="alert alert-success">
-          {result.imported} client(s) importé(s). {result.creditedAccounts} compte(s) existant(s) crédité(s) immédiatement ; les
-          autres recevront leurs tampons à l&apos;inscription.
+          {result.imported} client(s) importé(s) : {result.createdAccounts} nouveau(x) compte(s) en attente d&apos;inscription
+          (visibles dans Clients et au scanner), {result.creditedAccounts} compte(s) existant(s) crédité(s).
         </div>
       )}
     </div>

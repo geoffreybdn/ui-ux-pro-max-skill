@@ -31,6 +31,7 @@ export type Customer = {
   stamps: number;
   cashback_cents: number;
   birthdate: string | null;
+  pending: boolean;
   last_visit_at: string | null;
   created_at: string;
 };

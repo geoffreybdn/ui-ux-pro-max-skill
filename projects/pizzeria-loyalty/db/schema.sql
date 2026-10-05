@@ -157,3 +157,7 @@ create table if not exists coupon_redemptions (
   created_at  timestamptz not null default now()
 );
 create index if not exists coupon_redemptions_customer_idx on coupon_redemptions (customer_id);
+
+-- ─── v5 : anciens clients importés = vrais comptes « en attente d'inscription » ───
+-- Visibles dans l'admin et au scanner dès l'import ; l'inscription avec le même e-mail active le compte.
+alter table customers add column if not exists pending boolean not null default false;

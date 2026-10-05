@@ -41,7 +41,7 @@ export async function getCurrentUser(): Promise<Customer | null> {
     if (!id) return null;
     const [user] = await sql<Customer>`
       select id, email, name, phone, role, card_code, points, lifetime_points, stamps, cashback_cents,
-      to_char(birthdate, 'YYYY-MM-DD') as birthdate, last_visit_at, created_at
+      to_char(birthdate, 'YYYY-MM-DD') as birthdate, pending, last_visit_at, created_at
       from customers where id = ${id}`;
     return user ?? null;
   } catch {

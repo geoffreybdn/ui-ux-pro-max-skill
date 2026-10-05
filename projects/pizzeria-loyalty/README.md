@@ -33,7 +33,7 @@ Variables : `{prenom}`, `{tampons}`, `{total}`, `{reste}`, `{gain}`, `{recompens
 Colonnes obligatoires `email` et `tampons` (ou `points`), facultatives `nom` et `telephone` (séparateur `;` ou `,`, UTF-8 ou export Excel).
 
 - Client **déjà inscrit** avec cet e-mail → tampons crédités immédiatement.
-- Client **pas encore inscrit** → tampons mis en attente, puis ajoutés **automatiquement dès qu'il s'inscrit avec la même adresse e-mail**.
+- Client **pas encore inscrit** → un compte « pas encore inscrit » est créé avec ses tampons (visible dans Clients et au scanner, l'équipe peut déjà lui ajouter des tampons) ; il l'**active en s'inscrivant avec la même adresse e-mail** et garde tout.
 - Réimporter le même fichier ne crédite jamais deux fois.
 
 ## Déploiement (Vercel + Neon)

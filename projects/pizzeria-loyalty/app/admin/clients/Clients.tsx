@@ -42,7 +42,7 @@ export function Clients({ initialQuery = "" }: { initialQuery?: string }) {
           <tbody>
             {customers.map((c) => (
               <tr key={c.id}>
-                <td>{c.name}<div className="small muted">{c.email}{c.phone ? ` · ${c.phone}` : ""}</div></td>
+                <td>{c.name}{c.pending && <span className="badge" style={{ marginLeft: 6 }} title="Ancien client importé, pas encore inscrit dans l'app">pas encore inscrit</span>}<div className="small muted">{c.email}{c.phone ? ` · ${c.phone}` : ""}</div></td>
                 <td className="small" style={{ fontFamily: "monospace" }}>{c.card_code}</td>
                 <td>
                   <b>{c.stamps}</b> tampon{c.stamps > 1 ? "s" : ""}

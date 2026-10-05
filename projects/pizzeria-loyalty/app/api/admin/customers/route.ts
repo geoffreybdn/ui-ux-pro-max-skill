@@ -11,7 +11,7 @@ export const GET = handle(async (req: Request) => {
   if (!q) {
     const customers = await sql<Customer>`
       select id, email, name, phone, role, card_code, points, lifetime_points, stamps, cashback_cents,
-      to_char(birthdate, 'YYYY-MM-DD') as birthdate, last_visit_at, created_at
+      to_char(birthdate, 'YYYY-MM-DD') as birthdate, pending, last_visit_at, created_at
       from customers order by created_at desc limit 50`;
     return NextResponse.json({ customers });
   }
@@ -19,7 +19,7 @@ export const GET = handle(async (req: Request) => {
   const like = `%${q.toLowerCase()}%`;
   const customers = await sql<Customer>`
     select id, email, name, phone, role, card_code, points, lifetime_points, stamps, cashback_cents,
-      to_char(birthdate, 'YYYY-MM-DD') as birthdate, last_visit_at, created_at
+      to_char(birthdate, 'YYYY-MM-DD') as birthdate, pending, last_visit_at, created_at
     from customers
     where card_code = ${card} or lower(email) like ${like} or lower(name) like ${like}
        or regexp_replace(coalesce(phone, ''), '\\D', '', 'g') like ${"%" + q.replace(/\D/g, "") + "%"} and length(${q.replace(/\D/g, "")}) >= 4
