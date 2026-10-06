@@ -1,64 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { MoreVertical, Plus, Share, Smartphone, X } from "lucide-react";
+import { usePwaInstall } from "./usePwaInstall";
 
-type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 type Mode = "hidden" | "prompt" | "ios" | "ios-other" | "manual";
 
 const DISMISS_KEY = "pz-install-dismissed";
 
 /** Propose d'ajouter la carte sur l'écran d'accueil (Android/Chrome : bouton ; iPhone : mode d'emploi). */
 export function InstallCard({ force = false }: { force?: boolean }) {
-  const [mode, setMode] = useState<Mode>("hidden");
-  const [promptEvent, setPromptEvent] = useState<InstallPrompt | null>(null);
+  const pwa = usePwaInstall();
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (standalone) return;
     try {
-      if (!force && localStorage.getItem(DISMISS_KEY)) return;
+      if (!force && localStorage.getItem(DISMISS_KEY)) setDismissed(true);
     } catch {}
-
-    navigator.serviceWorker?.register("/sw.js").catch(() => {});
-    const ua = navigator.userAgent;
-    const isIOS = /iphone|ipad|ipod/i.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1);
-    if (isIOS) {
-      // Sur iPhone, seul Safari (ou iOS 16.4+ pour les autres navigateurs via Partager) permet l'ajout
-      setMode(/crios|fxios|edgios/i.test(ua) ? "ios-other" : "ios");
-      return;
-    }
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setPromptEvent(e as InstallPrompt);
-      setMode("prompt");
-    };
-    const onInstalled = () => setMode("hidden");
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    // Navigateur sans invite automatique (Firefox, Samsung…) : instructions génériques
-    const t = setTimeout(() => setMode((m) => (m === "hidden" && /android/i.test(ua) ? "manual" : m)), 2500);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-      clearTimeout(t);
-    };
   }, [force]);
+
+  const mode: Mode =
+    !pwa.ready || pwa.installed || dismissed || pwa.platform === "desktop"
+      ? pwa.canPrompt && !pwa.installed && !dismissed ? "prompt" : "hidden"
+      : pwa.platform === "ios"
+        ? pwa.iosOtherBrowser ? "ios-other" : "ios"
+        : pwa.canPrompt ? "prompt" : "manual";
 
   function dismiss() {
     try {
       localStorage.setItem(DISMISS_KEY, "1");
     } catch {}
-    setMode("hidden");
+    setDismissed(true);
   }
 
   async function install() {
-    if (!promptEvent) return;
-    await promptEvent.prompt();
-    const { outcome } = await promptEvent.userChoice;
-    if (outcome === "accepted") setMode("hidden");
+    await pwa.prompt();
   }
 
   if (mode === "hidden") return null;
@@ -104,6 +81,9 @@ export function InstallCard({ force = false }: { force?: boolean }) {
           <li>Choisissez <b>Ajouter à l&apos;écran d&apos;accueil</b> ou <b>Installer l&apos;application</b></li>
         </ol>
       )}
+      <Link href="/installer" className="small" style={{ display: "inline-block", marginTop: 10, fontWeight: 700 }}>
+        Voir le guide détaillé (iPhone et Android) →
+      </Link>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getSettings } from "@/lib/settings";
+import { InstallQuickButton } from "@/components/InstallQuickButton";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { pizzeriaName } = await getSettings();
@@ -20,7 +21,10 @@ export const viewport: Viewport = { themeColor: "#dc2626", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        {children}
+        <InstallQuickButton />
+      </body>
     </html>
   );
 }

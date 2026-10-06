@@ -70,9 +70,17 @@ enregistre qui a scanné (visible au tableau de bord et dans *Équipe*). Les adm
 leur téléphone et ouvrir directement le scanner (Android : appui long sur l'icône → *Scanner*).
 
 ### Carte sur l'écran d'accueil
-L'app est une PWA : sur Android/Chrome un bouton **Ajouter à l'écran d'accueil** apparaît sur la carte ; sur
-iPhone, les étapes Safari (Partager → *Sur l'écran d'accueil*) sont affichées. Une fois installée, la carte
-s'ouvre en plein écran, fonctionne hors connexion et peut recevoir les notifications (obligatoire sur iPhone).
+L'app est une PWA. Un bouton flottant **« Installer l'app »** est affiché sur toutes les pages clients (masqué
+une fois l'app installée et dans l'espace admin) :
+
+- **Android / Chrome** : installation en un appui (fenêtre d'installation native).
+- **iPhone / iPad** : Apple ne permet pas d'installer depuis un bouton, il ouvre donc le guide **`/installer`**.
+
+La page **`/installer`** (lien aussi sur la page d'accueil et sur la carte) explique pas à pas, avec des
+illustrations, l'ajout à l'écran d'accueil sur **iPhone** (Safari → Partager → *Sur l'écran d'accueil*) et sur
+**Android** (Chrome ⋮ → *Installer l'application*, note Samsung Internet) ; l'onglet du téléphone du client est
+choisi automatiquement. Une fois installée, la carte s'ouvre en plein écran, fonctionne hors connexion et peut
+recevoir les notifications (obligatoire sur iPhone, iOS 16.4+).
 
 Le cron (`vercel.json`) tourne une fois par jour (anniversaires, relances, promos programmées) (compatible plan Hobby). Les promos programmées
 sont aussi annoncées dès qu'un admin ouvre le tableau de bord.

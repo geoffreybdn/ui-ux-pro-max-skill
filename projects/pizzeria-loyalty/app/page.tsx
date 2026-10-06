@@ -59,6 +59,7 @@ export default async function Home() {
           <div className="l-ctas">
             <Link href="/inscription" className="l-btn l-btn-red">Créer ma carte <ChevronRight size={22} /></Link>
             <Link href="/connexion" className="l-btn l-btn-ghost">J&apos;ai déjà un compte</Link>
+            <Link href="/installer" className="l-install-link">📲 Installer l&apos;app sur mon téléphone</Link>
           </div>
         </div>
       </section>
