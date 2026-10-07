@@ -46,7 +46,6 @@ export function Clients({ initialQuery = "" }: { initialQuery?: string }) {
                 <td className="small" style={{ fontFamily: "monospace" }}>{c.card_code}</td>
                 <td>
                   <b>{c.stamps}</b> tampon{c.stamps > 1 ? "s" : ""}
-                  {c.birthdate && <div className="small muted">🎂 {new Date(`${c.birthdate}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</div>}
                 </td>
                 <td className="small">{c.last_visit_at ? new Date(c.last_visit_at).toLocaleDateString("fr-FR") : "—"}</td>
                 <td>

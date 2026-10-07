@@ -11,12 +11,14 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 | **La carte** | nombre de tampons (2 à 50), récompense (ex. « Pizza offerte ») |
 | **Règle de gain** | **1 tampon par pizza** (par défaut : l'équipe indique le nombre de pizzas) · ou 1 tampon par passage |
 | **Plafond** | maximum de tampons par passage (optionnel) |
-| **Tampons offerts** | à l'inscription, le jour de l'anniversaire (une fois par an), parrainage parrain / filleul, codes boutique |
+| **Tampons offerts** | à l'inscription, parrainage parrain / filleul, codes boutique |
 | **Promotions** | tampons doublés / triplés sur une période, annoncés par notification |
 | **Codes promo** | « X achetée(s) = Y offerte(s) », réduction en % ou en €, produit offert, tampons bonus, offre libre ; **1 utilisation par client (case à cocher)** ou illimitée, maximum total, jours de la semaine, dates, commande minimum, conditions ; visibles dans l'app client et annoncés par notification |
 | **Notifications** | chacune activable et modifiable, seuil « récompense proche », délai de relance |
 
-Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil (anniversaire),
+Inscription : nom, e-mail, **téléphone obligatoire** (validé et formaté, ex. `06 12 34 56 78`), mot de passe, code facultatif.
+
+Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil,
 installation sur l'écran d'accueil, accès hors connexion.
 
 Côté équipe : scanner caméra, **ajouter ou retirer** des tampons (boutons rapides +1 à +5, sélecteur − / +,
@@ -25,7 +27,7 @@ vérification / validation des **codes promo** (avec ou sans carte client), bout
 où en sont les cartes, origine des inscriptions…).
 
 ### Notifications automatiques (activables et modifiables une par une)
-Bienvenue · tampon ajouté · récompense proche · carte complète · anniversaire · parrainage réussi ·
+Bienvenue · tampon ajouté · récompense proche · carte complète · parrainage réussi ·
 relance d'inactivité · démarrage d'une promotion.
 Variables : `{prenom}`, `{tampons}`, `{total}`, `{reste}`, `{gain}`, `{recompense}`, `{bonus}`, `{filleul}`.
 
@@ -82,7 +84,7 @@ illustrations, l'ajout à l'écran d'accueil sur **iPhone** (Safari → Partager
 choisi automatiquement. Une fois installée, la carte s'ouvre en plein écran, fonctionne hors connexion et peut
 recevoir les notifications (obligatoire sur iPhone, iOS 16.4+).
 
-Le cron (`vercel.json`) tourne une fois par jour (anniversaires, relances, promos programmées) (compatible plan Hobby). Les promos programmées
+Le cron (`vercel.json`) tourne une fois par jour (relances, promos programmées) (compatible plan Hobby). Les promos programmées
 sont aussi annoncées dès qu'un admin ouvre le tableau de bord.
 
 ## Développement local

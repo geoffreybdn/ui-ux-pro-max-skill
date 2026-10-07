@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import Link from "next/link";
-import { Cake, Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
+import { Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { PushToggle } from "@/components/PushToggle";
 import { InstallCard } from "@/components/InstallCard";
@@ -127,7 +127,6 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
           <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
             <li>{ruleLabel(s.stamps)}{s.stamps.maxPerVisit > 0 ? ` (max ${s.stamps.maxPerVisit} par passage)` : ""}.</li>
             <li>{req} tampons = <b>{s.stamps.reward}</b>, puis une nouvelle carte commence.</li>
-            {s.birthdayStamps > 0 && <li>{plural(s.birthdayStamps, "tampon")} offert(s) le jour de votre anniversaire 🎂</li>}
             <li>Pendant nos promos, vos tampons peuvent être doublés 🔥</li>
           </ul>
         </section>
@@ -166,10 +165,10 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
 
         <details className="card">
           <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-            Mon profil {!user.birthdate && s.birthdayStamps > 0 && <span className="badge" style={{ marginLeft: 6 }}><Cake size={12} /> ajoutez votre anniversaire</span>}
+            Mon profil {!user.phone && <span className="badge" style={{ marginLeft: 6 }}>ajoutez votre téléphone</span>}
           </summary>
           <div style={{ marginTop: 12 }}>
-            <ProfileForm name={user.name} phone={user.phone} birthdate={user.birthdate} />
+            <ProfileForm name={user.name} phone={user.phone} />
           </div>
         </details>
       </main>

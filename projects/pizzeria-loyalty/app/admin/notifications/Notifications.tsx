@@ -32,7 +32,7 @@ export function Notifications() {
       <h1>Notifications</h1>
       <div className="card small">
         <b>Notifications automatiques</b> : bienvenue, tampon ajouté, récompense proche, carte complète,
-        anniversaire, parrainage, relance d&apos;inactivité et promotions.
+        parrainage, relance d&apos;inactivité et promotions.
         <div style={{ marginTop: 8 }}>
           <a className="btn btn-sm" href="/admin/programme#notifications">Activer / modifier les messages automatiques</a>
         </div>

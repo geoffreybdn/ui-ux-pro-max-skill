@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Cake, Save, Settings2, Stamp, Users } from "lucide-react";
+import { Bell, Gift, Save, Settings2, Stamp, Users } from "lucide-react";
 import { api } from "@/components/useApi";
 import type { NotificationKey, Settings } from "@/lib/settings";
 import { ruleLabel, stampCols } from "@/lib/program";
@@ -131,10 +131,9 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
       </section>
 
       <section className="panel stack">
-        <h2><Cake size={20} style={{ verticalAlign: "-3px" }} /> Tampons offerts</h2>
+        <h2><Gift size={20} style={{ verticalAlign: "-3px" }} /> Tampons offerts</h2>
         <div className="grid">
           <Num label="À l'inscription" value={s.welcomeStamps} suffix="tampons" onChange={(v) => set("welcomeStamps", v)} />
-          <Num label="Le jour de l'anniversaire" value={s.birthdayStamps} suffix="tampons" onChange={(v) => set("birthdayStamps", v)} />
         </div>
       </section>
 

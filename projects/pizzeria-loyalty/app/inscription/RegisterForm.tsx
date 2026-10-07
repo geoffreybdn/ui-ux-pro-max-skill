@@ -35,16 +35,13 @@ export function RegisterForm() {
       <label>Prénom et nom<input className="input" name="name" required autoComplete="name" /></label>
       <label>E-mail<input className="input" name="email" type="email" required autoComplete="email" /></label>
       <label>
-        Téléphone <span className="hint">(facultatif)</span>
-        <input className="input" name="phone" type="tel" autoComplete="tel" />
+        Téléphone
+        <input className="input" name="phone" type="tel" inputMode="tel" required autoComplete="tel"
+          placeholder="06 12 34 56 78" pattern="[0-9+ .()\-]{9,20}" title="Numéro de téléphone, ex. 06 12 34 56 78" />
       </label>
       <label>
         Mot de passe <span className="hint">8 caractères minimum</span>
         <input className="input" name="password" type="password" minLength={8} required autoComplete="new-password" />
-      </label>
-      <label>
-        Date de naissance <span className="hint">(facultatif — un cadeau le jour J 🎂)</span>
-        <input className="input" name="birthdate" type="date" max={new Date().toISOString().slice(0, 10)} />
       </label>
       <label>
         Code d&apos;inscription ou de parrainage <span className="hint">(facultatif — code boutique ou code carte d&apos;un ami)</span>

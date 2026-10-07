@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/components/useApi";
 
-export function ProfileForm({ name, phone, birthdate }: { name: string; phone: string | null; birthdate: string | null }) {
+export function ProfileForm({ name, phone }: { name: string; phone: string | null }) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ kind: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,17 +28,10 @@ export function ProfileForm({ name, phone, birthdate }: { name: string; phone: s
     <form className="stack" onSubmit={submit}>
       {msg && <div className={`alert alert-${msg.kind} small`}>{msg.text}</div>}
       <label>Nom<input className="input" name="name" defaultValue={name} required /></label>
-      <label>Téléphone<input className="input" name="phone" type="tel" defaultValue={phone ?? ""} /></label>
       <label>
-        Date de naissance
-        {birthdate ? (
-          <input className="input" value={new Date(`${birthdate}T12:00:00`).toLocaleDateString("fr-FR")} disabled />
-        ) : (
-          <>
-            <input className="input" name="birthdate" type="date" />
-            <span className="hint">Ne peut être saisie qu&apos;une fois.</span>
-          </>
-        )}
+        Téléphone
+        <input className="input" name="phone" type="tel" inputMode="tel" required autoComplete="tel" defaultValue={phone ?? ""}
+          placeholder="06 12 34 56 78" pattern="[0-9+ .()\-]{9,20}" title="Numéro de téléphone, ex. 06 12 34 56 78" />
       </label>
       <button className="btn" disabled={busy}>{busy ? "Enregistrement…" : "Enregistrer"}</button>
     </form>

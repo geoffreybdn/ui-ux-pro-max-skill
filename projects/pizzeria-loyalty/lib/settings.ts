@@ -5,7 +5,7 @@ import type { StampRule } from "./program";
 export type { StampRule };
 export { applyPromo, cardState, stampCols, plural, ruleLabel, formatEuros, renderTemplate, firstName } from "./program";
 
-export const NOTIFICATION_KEYS = ["welcome", "visit", "stampNear", "stampComplete", "birthday", "referral", "inactivity", "promo"] as const;
+export const NOTIFICATION_KEYS = ["welcome", "visit", "stampNear", "stampComplete", "referral", "inactivity", "promo"] as const;
 export type NotificationKey = (typeof NOTIFICATION_KEYS)[number];
 export type NotificationTemplate = { enabled: boolean; title: string; body: string };
 
@@ -21,7 +21,6 @@ export type Settings = {
     maxPerVisit: number;
   };
   welcomeStamps: number;
-  birthdayStamps: number;
   referral: { enabled: boolean; referrerStamps: number; refereeStamps: number };
   nearRewardStamps: number;
   inactivityDays: number;
@@ -34,7 +33,6 @@ export const NOTIFICATION_INFO: Record<NotificationKey, { label: string; when: s
   visit: { label: "Tampon ajouté", when: "après chaque passage scanné", vars: "{prenom} {gain} {tampons} {total} {reste}" },
   stampNear: { label: "Récompense proche", when: "quand il reste peu de tampons", vars: "{prenom} {reste} {recompense}" },
   stampComplete: { label: "Carte complète", when: "quand la carte est pleine", vars: "{prenom} {recompense}" },
-  birthday: { label: "Anniversaire", when: "le jour de l'anniversaire (cron quotidien)", vars: "{prenom} {bonus} {tampons} {total}" },
   referral: { label: "Parrainage réussi", when: "quand un filleul s'inscrit", vars: "{prenom} {filleul} {bonus}" },
   inactivity: { label: "Relance inactivité", when: "après X jours sans visite (cron quotidien)", vars: "{prenom} {tampons} {total} {reste} {recompense}" },
   promo: { label: "Promotion", when: "au démarrage d'une promo (titre/message de la promo)", vars: "—" },
@@ -45,7 +43,6 @@ export const DEFAULT_SETTINGS: Settings = {
   city: "",
   stamps: { required: 10, reward: "Pizza offerte", rule: "quantity", minAmount: 0, unitLabel: "pizza", maxPerVisit: 0 },
   welcomeStamps: 1,
-  birthdayStamps: 2,
   referral: { enabled: true, referrerStamps: 2, refereeStamps: 1 },
   nearRewardStamps: 2,
   inactivityDays: 30,
@@ -54,7 +51,6 @@ export const DEFAULT_SETTINGS: Settings = {
     visit: { enabled: true, title: "{gain} ✅", body: "Merci {prenom} ! Votre carte : {tampons}/{total}." },
     stampNear: { enabled: true, title: "Plus que {reste} tampon(s) ! 🔥", body: "{recompense} est presque à vous, {prenom}." },
     stampComplete: { enabled: true, title: "Carte complète ! 🎉", body: "{recompense} vous attend en caisse, {prenom}." },
-    birthday: { enabled: true, title: "Joyeux anniversaire {prenom} ! 🎂", body: "On vous offre {bonus} tampon(s). Votre carte : {tampons}/{total}." },
     referral: { enabled: true, title: "Merci pour le parrainage ! 🙌", body: "{filleul} s'est inscrit grâce à vous : +{bonus} tampon(s)." },
     inactivity: { enabled: true, title: "Vous nous manquez ! 🍕", body: "{prenom}, plus que {reste} tampon(s) avant : {recompense}." },
     promo: { enabled: true, title: "", body: "" },
@@ -98,7 +94,6 @@ export function normalizeSettings(raw: unknown): Settings {
       maxPerVisit: int(st.maxPerVisit, d.stamps.maxPerVisit, 0, 50),
     },
     welcomeStamps: int(r.welcomeStamps, d.welcomeStamps, 0, 20),
-    birthdayStamps: int(r.birthdayStamps, d.birthdayStamps, 0, 20),
     referral: {
       enabled: bool(r.referral?.enabled, d.referral.enabled),
       referrerStamps: int(r.referral?.referrerStamps, d.referral.referrerStamps, 0, 20),

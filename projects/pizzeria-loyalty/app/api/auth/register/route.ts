@@ -7,6 +7,7 @@ import { adminEmails, normalizeEmail } from "@/lib/config";
 import { claimLegacyStamps, creditStamps, generateCardCode, parseCardCode } from "@/lib/loyalty";
 import { notify } from "@/lib/notify";
 import { firstName, getSettings } from "@/lib/settings";
+import { normalizePhone } from "@/lib/program";
 
 function detectDevice(ua: string) {
   if (/iphone|ipad|ipod/i.test(ua)) return "ios";
@@ -15,28 +16,21 @@ function detectDevice(ua: string) {
   return ua ? "ordinateur" : "autre";
 }
 
-function parseBirthdate(v: unknown): string | null {
-  const s = String(v || "").trim();
-  if (!s) return null;
-  const d = new Date(`${s}T12:00:00Z`);
-  const year = d.getUTCFullYear();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || isNaN(d.getTime()) || year < 1900 || d > new Date()) bad("Date de naissance invalide");
-  return s;
-}
-
 export const POST = handle(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
   const email = normalizeEmail(String(body.email || ""));
   const name = String(body.name || "").trim();
-  const phone = String(body.phone || "").trim() || null;
+  const phoneInput = String(body.phone || "").trim();
+  const phone = normalizePhone(phoneInput);
   const password = String(body.password || "");
   const code = String(body.signupCode || "").trim().toUpperCase();
-  const birthdate = parseBirthdate(body.birthdate);
   const src = ["qr", "social"].includes(String(body.src)) ? String(body.src) : "web";
   const device = detectDevice(req.headers.get("user-agent") || "");
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad("Adresse e-mail invalide");
   if (name.length < 2) bad("Indiquez votre prénom");
+  if (!phoneInput) bad("Le numéro de téléphone est obligatoire");
+  if (!phone) bad("Numéro de téléphone invalide (ex. 06 12 34 56 78)");
   if (password.length < 8) bad("Le mot de passe doit contenir au moins 8 caractères");
 
   const [existing] = await sql<{ id: number; pending: boolean; stamps: number }>`
@@ -69,8 +63,8 @@ export const POST = handle(async (req: Request) => {
   if (existing?.pending) {
     [customer] = await sql<{ id: number }>`
       update customers
-         set name = ${name}, phone = coalesce(${phone}, phone), password_hash = ${hash}, pending = false,
-             birthdate = coalesce(${birthdate}, birthdate), signup_device = ${device},
+         set name = ${name}, phone = ${phone}, password_hash = ${hash}, pending = false,
+             signup_device = ${device},
              referred_by = ${referrer && referrer.id !== existing.id ? referrer.id : null},
              role = case when ${role} = 'admin' then 'admin' else role end
        where id = ${existing.id} and pending
@@ -80,8 +74,8 @@ export const POST = handle(async (req: Request) => {
   for (let attempt = 0; attempt < 3 && !customer; attempt++) {
     try {
       [customer] = await sql<{ id: number }>`
-        insert into customers (email, name, phone, password_hash, role, card_code, birthdate, referred_by, signup_source, signup_device)
-        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()}, ${birthdate}, ${referrer?.id ?? null},
+        insert into customers (email, name, phone, password_hash, role, card_code, referred_by, signup_source, signup_device)
+        values (${email}, ${name}, ${phone}, ${hash}, ${role}, ${generateCardCode()}, ${referrer?.id ?? null},
                 ${referrer ? "parrainage" : signupCode ? "code" : src}, ${device})
         returning id`;
     } catch (err) {

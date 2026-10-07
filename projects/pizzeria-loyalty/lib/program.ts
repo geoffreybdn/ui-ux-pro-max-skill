@@ -41,6 +41,18 @@ export function renderTemplate(tpl: string, vars: Record<string, string | number
   return tpl.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 }
 
+/**
+ * Valide et formate un numéro de téléphone. France : 06 12 34 56 78 (accepte +33 / 0033 / espaces, points, tirets).
+ * Autres pays : format international +XXXXXXXX (8 à 15 chiffres). Renvoie null si invalide.
+ */
+export function normalizePhone(input: string): string | null {
+  const raw = input.replace(/[\s.\-()]/g, "");
+  const fr = raw.match(/^(?:\+33|0033|0)([1-9]\d{8})$/);
+  if (fr) return ("0" + fr[1]).replace(/(\d{2})(?=\d)/g, "$1 ");
+  if (/^(\+|00)[1-9]\d{7,14}$/.test(raw)) return raw.replace(/^00/, "+");
+  return null;
+}
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || name;
 }

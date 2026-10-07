@@ -127,10 +127,10 @@ export async function redeemStampCard(opts: { customerId: number; staffId: numbe
   return { stampsBalance: row.stamps, reward: s.stamps.reward };
 }
 
-/** Crédite des tampons offerts (bienvenue, anniversaire, parrainage, code…) et renvoie le nouveau solde. */
+/** Crédite des tampons offerts (bienvenue, parrainage, code…) et renvoie le nouveau solde. */
 export async function creditStamps(
   customerId: number,
-  type: "welcome" | "birthday" | "referral" | "bonus",
+  type: "welcome" | "referral" | "bonus",
   stamps: number,
   note: string
 ) {
@@ -263,41 +263,4 @@ export async function remindInactiveCustomers() {
     })
   );
   return { customers: inactive.length, sent };
-}
-
-/**
- * Anniversaires du jour (heure de Paris) : tampons offerts une fois par an + notification.
- * Les clients nés un 29 février sont fêtés le 28 février les années non bissextiles.
- */
-export async function celebrateBirthdays() {
-  const s = await getSettings();
-  const bonus = s.birthdayStamps;
-  const rows = await sql<{ id: number; name: string; stamps: number }>`
-    with today as (select (now() at time zone 'Europe/Paris')::date as d),
-    b as (
-      update customers c
-         set last_birthday_year = extract(year from t.d)::int,
-             stamps = c.stamps + ${bonus}
-        from today t
-       where c.birthdate is not null
-         and coalesce(c.last_birthday_year, 0) < extract(year from t.d)
-         and (
-           to_char(c.birthdate, 'MM-DD') = to_char(t.d, 'MM-DD')
-           or (to_char(c.birthdate, 'MM-DD') = '02-29' and to_char(t.d, 'MM-DD') = '02-28'
-               and extract(day from date_trunc('year', t.d) + interval '1 month 28 days') <> 29)
-         )
-      returning c.id, c.name, c.stamps
-    ), tx as (
-      insert into transactions (customer_id, type, points, stamps, note)
-      select id, 'birthday', 0, ${bonus}, 'Cadeau d''anniversaire' from b where ${bonus} > 0
-    )
-    select * from b`;
-  const sent = await notifyEach(
-    "birthday",
-    rows.map((c) => {
-      const st = cardState(c.stamps, s.stamps.required);
-      return { id: c.id, vars: { prenom: firstName(c.name), bonus, tampons: st.available ? s.stamps.required : st.onCard, total: s.stamps.required } };
-    })
-  );
-  return { customers: rows.length, sent };
 }
