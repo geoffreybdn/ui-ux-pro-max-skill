@@ -18,6 +18,10 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 
 Inscription : nom, e-mail, **téléphone obligatoire** (validé et formaté, ex. `06 12 34 56 78`), mot de passe, code facultatif.
 
+Notifications côté client : une invitation claire **juste sous la carte** (bénéfices : tampon ajouté, cadeau prêt,
+promos), affichée seulement quand l'activation est possible, avec « Plus tard » (masquée 7 jours) ; le réglage
+permanent activer / désactiver est dans **Mon profil et notifications**.
+
 Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil,
 installation sur l'écran d'accueil, accès hors connexion.
 

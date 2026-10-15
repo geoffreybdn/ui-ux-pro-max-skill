@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { PushToggle } from "@/components/PushToggle";
+import { PushPrompt } from "@/components/PushPrompt";
 import { InstallCard } from "@/components/InstallCard";
 import { ReferralShare } from "@/components/ReferralShare";
 import { ProfileForm } from "@/components/ProfileForm";
@@ -101,6 +102,8 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
           </p>
         )}
 
+        <PushPrompt remaining={st.available > 0 ? 0 : st.remaining} reward={s.stamps.reward} force={Boolean(params.bienvenue)} />
+
         {offers.length > 0 && (
           <section className="card stack" aria-label="Mes offres">
             <h2 style={{ margin: 0 }}><Ticket size={20} style={{ verticalAlign: "-3px" }} /> Mes offres</h2>
@@ -119,8 +122,6 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
         )}
 
         <InstallCard force={Boolean(params.bienvenue)} />
-
-        <PushToggle />
 
         <section className="card stack">
           <h2 style={{ margin: 0 }}><Stamp size={20} style={{ verticalAlign: "-3px" }} /> Comment ça marche</h2>
@@ -165,9 +166,10 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
 
         <details className="card">
           <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-            Mon profil {!user.phone && <span className="badge" style={{ marginLeft: 6 }}>ajoutez votre téléphone</span>}
+            Mon profil et notifications {!user.phone && <span className="badge" style={{ marginLeft: 6 }}>ajoutez votre téléphone</span>}
           </summary>
-          <div style={{ marginTop: 12 }}>
+          <div className="stack" style={{ marginTop: 12 }}>
+            <PushToggle />
             <ProfileForm name={user.name} phone={user.phone} />
           </div>
         </details>
