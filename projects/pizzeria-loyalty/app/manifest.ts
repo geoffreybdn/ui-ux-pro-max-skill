@@ -23,6 +23,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       { src: "/app-icons/alabella-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
+      { name: "Commander en ligne", url: "/commander", icons: [{ src: "/app-icons/alabella-192.png", sizes: "192x192" }] },
       { name: "Ma carte", url: "/carte", icons: [{ src: "/app-icons/alabella-192.png", sizes: "192x192" }] },
       { name: "Scanner (équipe)", url: "/admin/scanner", icons: [{ src: "/app-icons/alabella-192.png", sizes: "192x192" }] },
     ],

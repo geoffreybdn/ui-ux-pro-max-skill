@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { ArrowRight, ChevronRight, Gift, Heart, Leaf, Pizza, ScanLine, Star, User, UserPlus } from "lucide-react";
+import { ArrowRight, ChevronRight, Gift, ShoppingBag, Heart, Leaf, Pizza, ScanLine, Star, User, UserPlus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings, plural, stampCols } from "@/lib/settings";
 
@@ -59,6 +59,9 @@ export default async function Home() {
           <div className="l-ctas">
             <Link href="/inscription" className="l-btn l-btn-red">Créer ma carte <ChevronRight size={22} /></Link>
             <Link href="/connexion" className="l-btn l-btn-ghost">J&apos;ai déjà un compte</Link>
+            {s.orderUrl && (
+              <a href="/commander" target="_blank" rel="noopener" className="l-btn l-btn-order"><ShoppingBag size={20} /> Commander en ligne</a>
+            )}
             <Link href="/installer" className="l-install-link">📲 Installer l&apos;app sur mon téléphone</Link>
           </div>
         </div>
@@ -126,6 +129,7 @@ export default async function Home() {
         <div className="l-footer-links">
           <Link href="/inscription">Créer ma carte</Link>
           <Link href="/connexion">Connexion</Link>
+          {s.orderUrl && <a href="/commander" target="_blank" rel="noopener">Commander en ligne</a>}
         </div>
       </footer>
     </div>

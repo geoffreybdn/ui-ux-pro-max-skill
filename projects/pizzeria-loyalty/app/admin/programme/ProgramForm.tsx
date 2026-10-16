@@ -97,6 +97,10 @@ export function ProgramForm({ initial, info }: { initial: Settings; info: Info }
             <input className="input" value={s.city} onChange={(e) => set("city", e.target.value)} placeholder="Knutange" />
           </label>
         </div>
+        <label>
+          Lien de commande en ligne <span className="hint">(bouton « Commander en ligne » sur l&apos;accueil, la carte et l&apos;app — vide pour le masquer)</span>
+          <input className="input" type="url" value={s.orderUrl} onChange={(e) => set("orderUrl", e.target.value)} placeholder="https://…" />
+        </label>
       </section>
 
       <section className="panel stack">

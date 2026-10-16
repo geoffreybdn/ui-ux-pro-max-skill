@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import Link from "next/link";
-import { Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
+import { ShoppingBag, Flame, Gift, PartyPopper, Stamp, Ticket, Users } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { PushToggle } from "@/components/PushToggle";
 import { PushPrompt } from "@/components/PushPrompt";
@@ -100,6 +100,12 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
           <p className="center" style={{ margin: 0 }}>
             Encore <b>{plural(st.remaining, "tampon")}</b> pour : <b>{s.stamps.reward}</b>
           </p>
+        )}
+
+        {s.orderUrl && (
+          <a href="/commander" target="_blank" rel="noopener" className="btn btn-order btn-block">
+            <ShoppingBag size={20} /> Commander en ligne
+          </a>
         )}
 
         <PushPrompt remaining={st.available > 0 ? 0 : st.remaining} reward={s.stamps.reward} force={Boolean(params.bienvenue)} />

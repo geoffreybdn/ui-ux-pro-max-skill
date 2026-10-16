@@ -12,6 +12,8 @@ export type NotificationTemplate = { enabled: boolean; title: string; body: stri
 export type Settings = {
   pizzeriaName: string;
   city: string;
+  /** Lien externe de commande en ligne (vide = bouton masqué). */
+  orderUrl: string;
   stamps: {
     required: number;
     reward: string;
@@ -41,6 +43,7 @@ export const NOTIFICATION_INFO: Record<NotificationKey, { label: string; when: s
 export const DEFAULT_SETTINGS: Settings = {
   pizzeriaName: process.env.NEXT_PUBLIC_PIZZERIA_NAME || "A la Bella Pizza",
   city: "",
+  orderUrl: "https://scan.feadys.com/?uidEts=YR51vVbWfSSKf2lT5Zyk5K7wF3R2&OrderOnline=true",
   stamps: { required: 10, reward: "Pizza offerte", rule: "quantity", minAmount: 0, unitLabel: "pizza", maxPerVisit: 0 },
   welcomeStamps: 1,
   referral: { enabled: true, referrerStamps: 2, refereeStamps: 1 },
@@ -65,6 +68,18 @@ const int = (v: unknown, def: number, min: number, max: number) => Math.round(nu
 const bool = (v: unknown, def: boolean) => (typeof v === "boolean" ? v : def);
 const str = (v: unknown, def: string, max = 200) => (typeof v === "string" ? v.slice(0, max) : def);
 
+/** N'accepte que les liens http(s) ; retire les paramètres de suivi (fbclid, utm_…). */
+function cleanUrl(v: string) {
+  try {
+    const u = new URL(v.trim());
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "";
+    for (const k of [...u.searchParams.keys()]) if (/^(fbclid|gclid|utm_.+)$/i.test(k)) u.searchParams.delete(k);
+    return u.toString();
+  } catch {
+    return "";
+  }
+}
+
 /** Fusionne une saisie (partielle, non fiable) avec les valeurs par défaut et la borne. */
 export function normalizeSettings(raw: unknown): Settings {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -84,6 +99,7 @@ export function normalizeSettings(raw: unknown): Settings {
   return {
     pizzeriaName: str(r.pizzeriaName, d.pizzeriaName, 50).trim() || d.pizzeriaName,
     city: str(r.city, d.city, 40).trim(),
+    orderUrl: cleanUrl(str(r.orderUrl, d.orderUrl, 500)),
     stamps: {
       required: int(st.required, d.stamps.required, 2, 50),
       reward: str(st.reward, d.stamps.reward, 60).trim() || d.stamps.reward,

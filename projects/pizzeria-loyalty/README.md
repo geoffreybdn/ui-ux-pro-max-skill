@@ -22,6 +22,8 @@ Notifications côté client : une invitation claire **juste sous la carte** (bé
 promos), affichée seulement quand l'activation est possible, avec « Plus tard » (masquée 7 jours) ; le réglage
 permanent activer / désactiver est dans **Mon profil et notifications**.
 
+**Commande en ligne** : bouton « Commander en ligne » sur l'accueil, la carte client et en raccourci de l'app (appui long sur l'icône), via `/commander` qui redirige vers le lien réglable dans *Admin → Carte à tampons* (vide = bouton masqué).
+
 Côté client : carte avec QR code et grille de tampons, cadeau disponible, parrainage, historique, profil,
 installation sur l'écran d'accueil, accès hors connexion.
 
