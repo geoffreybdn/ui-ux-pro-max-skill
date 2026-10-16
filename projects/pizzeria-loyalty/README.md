@@ -12,7 +12,7 @@ Programme **100 % carte à tampons**, entièrement paramétrable dans **Admin �
 | **Règle de gain** | **1 tampon par pizza** (par défaut : l'équipe indique le nombre de pizzas) · ou 1 tampon par passage |
 | **Plafond** | maximum de tampons par passage (optionnel) |
 | **Tampons offerts** | à l'inscription, parrainage parrain / filleul, codes boutique |
-| **Promotions** | tampons doublés / triplés sur une période, annoncés par notification |
+| **Promotions** | offres datées (début + date limite) : « X achetée(s) = Y offerte(s) », -% ou -€, produit offert, offre libre, **sur place, en livraison ou les deux** ; ou tampons doublés / triplés. Chaque promo envoie **automatiquement une notification à tous les clients à sa date de lancement** (immédiatement si elle démarre tout de suite ; sinon au premier passage des crons 9 h / 16 h UTC ou dès qu'une page de l'app est ouverte après le lancement). Visibles sur la carte client (bouton « Commander en ligne » pour la livraison), la page d'accueil et le scanner |
 | **Codes promo** | « X achetée(s) = Y offerte(s) », réduction en % ou en €, produit offert, tampons bonus, offre libre ; **1 utilisation par client (case à cocher)** ou illimitée, maximum total, jours de la semaine, dates, commande minimum, conditions ; visibles dans l'app client et annoncés par notification |
 | **Notifications** | chacune activable et modifiable, seuil « récompense proche », délai de relance |
 

@@ -9,7 +9,9 @@ import { ReferralShare } from "@/components/ReferralShare";
 import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { getActivePromotion } from "@/lib/loyalty";
+import { announceStartedPromotions, getActiveOffers, getActivePromotion } from "@/lib/loyalty";
+import { PromoOffers } from "@/components/PromoOffers";
+import { after } from "next/server";
 import { getCustomerOffers } from "@/lib/coupons";
 import { couponBenefit, couponConditions } from "@/lib/program";
 import { cardState, firstName, getSettings, plural, ruleLabel, stampCols } from "@/lib/settings";
@@ -32,9 +34,12 @@ type Tx = { id: number; type: string; stamps: number; note: string | null; creat
 export default async function CardPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const [s, promo, offers, history] = await Promise.all([
+  // Annonce les promos programmées dont la date de lancement est passée (complète les crons)
+  after(() => announceStartedPromotions().catch(() => {}));
+  const [s, promo, promoOffers, offers, history] = await Promise.all([
     getSettings(),
     getActivePromotion(),
+    getActiveOffers(),
     getCustomerOffers(user.id),
     sql<Tx>`
       select id, type, stamps, note, created_at from transactions
@@ -101,6 +106,8 @@ export default async function CardPage({ searchParams }: { searchParams: Promise
             Encore <b>{plural(st.remaining, "tampon")}</b> pour : <b>{s.stamps.reward}</b>
           </p>
         )}
+
+        <PromoOffers promos={promoOffers} orderUrl={s.orderUrl} />
 
         {s.orderUrl && (
           <a href="/commander" target="_blank" rel="noopener" className="btn btn-order btn-block">

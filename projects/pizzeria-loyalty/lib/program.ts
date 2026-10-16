@@ -124,3 +124,42 @@ export function couponConditions(c: Pick<Coupon, "min_amount" | "valid_days" | "
   if (c.conditions) parts.push(c.conditions);
   return parts.join(" · ");
 }
+
+// ─── Promotions (tampons multipliés ou offre, sur place et/ou en livraison) ───
+
+export type PromoKind = "stamps" | Exclude<CouponKind, "stamps">;
+export type PromoChannel = "all" | "onsite" | "delivery";
+
+export const PROMO_KINDS: { value: PromoKind; label: string }[] = [
+  { value: "bogo", label: "X achetée(s) = Y offerte(s)" },
+  { value: "percent", label: "Réduction en %" },
+  { value: "amount", label: "Réduction en €" },
+  { value: "free_item", label: "Produit offert" },
+  { value: "custom", label: "Offre libre (texte)" },
+  { value: "stamps", label: "Tampons multipliés (x2, x3)" },
+];
+
+export const PROMO_CHANNELS: { value: PromoChannel; label: string; short: string }[] = [
+  { value: "all", label: "Sur place et en livraison", short: "Sur place & livraison" },
+  { value: "onsite", label: "Sur place uniquement", short: "Sur place uniquement" },
+  { value: "delivery", label: "En livraison uniquement (commande en ligne)", short: "Livraison uniquement" },
+];
+
+type PromoLike = { kind: PromoKind; value: number | string; buy_qty: number; get_qty: number; item: string; title: string; multiplier: number | string };
+
+/** Avantage de la promo en clair (ex. « 1 pizza achetée = 1 pizza offerte », « Tampons x2 »). */
+export function promoBenefit(p: PromoLike) {
+  if (p.kind === "stamps") return `Tampons x${Number(p.multiplier)} sur vos achats`;
+  return couponBenefit({ ...p, value: Number(p.value) });
+}
+
+export function channelLabel(c: PromoChannel) {
+  return PROMO_CHANNELS.find((x) => x.value === c)?.short ?? "";
+}
+
+/** Texte par défaut de la notification de lancement. */
+export function promoNotificationBody(p: PromoLike & { channel: PromoChannel; ends_at: string | Date }) {
+  const until = new Date(p.ends_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" });
+  const where = p.kind === "stamps" ? "" : p.channel === "onsite" ? " sur place uniquement" : p.channel === "delivery" ? " en livraison uniquement" : " sur place et en livraison";
+  return `${promoBenefit(p)}${where}, jusqu'au ${until} !`;
+}

@@ -3,6 +3,8 @@ import { sql, type Promotion } from "./db";
 import { broadcast, pushToCustomer } from "./push";
 import { notify, notifyEach } from "./notify";
 import { applyPromo, cardState, firstName, getSettings, plural } from "./settings";
+import { promoNotificationBody } from "./program";
+import { ensurePromoSchema } from "./schema";
 
 const CARD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I pour la saisie manuelle
 
@@ -18,13 +20,24 @@ export function parseCardCode(raw: string): string {
   return match ? `PZ-${match[1]}` : raw.trim().toUpperCase();
 }
 
-/** Promotion en cours avec le multiplicateur le plus élevé. */
+/** Promotion « tampons multipliés » en cours avec le multiplicateur le plus élevé. */
 export async function getActivePromotion(): Promise<Promotion | null> {
+  await ensurePromoSchema();
   const [promo] = await sql<Promotion>`
     select * from promotions
-    where active and starts_at <= now() and ends_at > now()
+    where active and kind = 'stamps' and starts_at <= now() and ends_at > now()
     order by multiplier desc, ends_at asc limit 1`;
   return promo ?? null;
+}
+
+/** Promos d'offres en cours (1 achetée = 1 offerte, remises…), éventuellement filtrées par canal. */
+export async function getActiveOffers(channel?: "onsite" | "delivery"): Promise<Promotion[]> {
+  await ensurePromoSchema();
+  return sql<Promotion>`
+    select * from promotions
+    where active and kind <> 'stamps' and starts_at <= now() and ends_at > now()
+      and (${channel ?? null}::text is null or channel in ('all', ${channel ?? "all"}))
+    order by ends_at asc`;
 }
 
 /** Notifications « récompense proche » / « carte complète » après un gain de tampons. */
@@ -219,6 +232,7 @@ export async function importLegacyCustomers(rows: LegacyRow[]) {
 
 /** Envoie la notification des promotions qui ont démarré et n'ont pas encore été annoncées. */
 export async function announceStartedPromotions() {
+  await ensurePromoSchema();
   const s = await getSettings();
   const promos = await sql<Promotion>`
     update promotions set notified_at = now()
@@ -227,12 +241,12 @@ export async function announceStartedPromotions() {
   if (!s.notifications.promo.enabled) return { promotions: promos.length, sent: 0 };
   let sent = 0;
   for (const p of promos) {
-    const until = new Date(p.ends_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
     sent += await broadcast(
       {
         title: p.title,
-        body: p.message || `Tampons x${Number(p.multiplier)} sur toutes vos commandes jusqu'au ${until} !`,
+        body: p.message || promoNotificationBody(p),
         tag: `promo-${p.id}`,
+        url: "/carte#promos",
       },
       `promo:${p.id}`
     );

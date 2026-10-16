@@ -161,3 +161,13 @@ create index if not exists coupon_redemptions_customer_idx on coupon_redemptions
 -- ─── v5 : anciens clients importés = vrais comptes « en attente d'inscription » ───
 -- Visibles dans l'admin et au scanner dès l'import ; l'inscription avec le même e-mail active le compte.
 alter table customers add column if not exists pending boolean not null default false;
+
+-- ─── v6 : promotions d'offres (1 achetée = 1 offerte, remises…) sur place et/ou en livraison ───
+-- kind = 'stamps' : tampons multipliés (comportement historique) ; sinon offre annoncée au client.
+alter table promotions add column if not exists kind text not null default 'stamps';
+alter table promotions add column if not exists channel text not null default 'all';  -- all | onsite | delivery
+alter table promotions add column if not exists value numeric(8, 2) not null default 0;
+alter table promotions add column if not exists buy_qty integer not null default 1;
+alter table promotions add column if not exists get_qty integer not null default 1;
+alter table promotions add column if not exists item text not null default 'pizza';
+alter table promotions add column if not exists conditions text;

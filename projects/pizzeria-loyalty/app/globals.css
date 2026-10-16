@@ -720,3 +720,19 @@ body:has(> .landing) { background: #f6efe3; }
 .l-btn-order:hover { background: #fff; }
 .btn-order { background: var(--l-green, #103128); border-color: var(--l-green, #103128); color: #fff; min-height: 52px; font-size: 1.05rem; text-decoration: none; }
 .btn-order:hover { background: #0b2620; color: #fff; }
+/* Promotions (admin + client) */
+.promo-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.promo-channels { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.promo-channels legend { font-weight: 700; margin-bottom: 6px; }
+.promo-channel { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; font-weight: 600; }
+.promo-channel.is-on { border-color: var(--primary); background: #fff1f1; }
+.promo-channel input { width: auto; margin: 0; accent-color: var(--primary); }
+.notif-preview { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 14px; background: #f1f5f9; border: 1px solid #e2e8f0; }
+.notif-preview img { border-radius: 8px; flex: none; }
+.promo-offer { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, #fff7ed, #fff); border: 1.5px solid #fdba74; }
+.promo-offer-top { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
+.promo-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; background: #103128; color: #fff; }
+.promo-tag.is-onsite { background: #e1261c; }
+.l-promo-strip { display: flex; flex-direction: column; gap: 8px; max-width: 420px; margin-bottom: 22px; }
+.l-promo { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 14px; background: rgb(255 255 255 / 12%); border: 1px solid rgb(255 255 255 / 25%); color: #fff; backdrop-filter: blur(4px); }
+.l-promo b { display: block; }

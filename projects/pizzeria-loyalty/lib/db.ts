@@ -41,6 +41,13 @@ export type Promotion = {
   title: string;
   message: string | null;
   multiplier: string;
+  kind: import("./program").PromoKind;
+  channel: import("./program").PromoChannel;
+  value: string;
+  buy_qty: number;
+  get_qty: number;
+  item: string;
+  conditions: string | null;
   starts_at: string;
   ends_at: string;
   active: boolean;

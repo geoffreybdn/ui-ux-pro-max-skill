@@ -5,12 +5,16 @@ import QRCode from "qrcode";
 import { ArrowRight, ChevronRight, Gift, ShoppingBag, Heart, Leaf, Pizza, ScanLine, Star, User, UserPlus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings, plural, stampCols } from "@/lib/settings";
+import { announceStartedPromotions, getActiveOffers } from "@/lib/loyalty";
+import { channelLabel, promoBenefit } from "@/lib/program";
+import { after } from "next/server";
 
 export default async function Home() {
   const user = await getCurrentUser().catch(() => null);
   if (user) redirect(user.role === "customer" ? "/carte" : "/admin");
 
-  const [s, h] = await Promise.all([getSettings(), headers()]);
+  after(() => announceStartedPromotions().catch(() => {}));
+  const [s, h, promos] = await Promise.all([getSettings(), headers(), getActiveOffers().catch(() => [])]);
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const qr = await QRCode.toDataURL(`${proto}://${host}/inscription?src=web`, { margin: 0, width: 280, errorCorrectionLevel: "M" });
@@ -56,6 +60,20 @@ export default async function Home() {
             <li><span className="l-perk-icon"><ScanLine size={30} /></span><b>Simple et rapide</b><span>en caisse</span></li>
           </ul>
 
+          {promos.length > 0 && (
+            <div className="l-promo-strip" aria-label="Promos du moment">
+              {promos.slice(0, 2).map((p) => (
+                <div key={p.id} className="l-promo">
+                  <span aria-hidden style={{ fontSize: 22 }}>🔥</span>
+                  <div>
+                    <b>{p.title}</b>
+                    <span className="small">{promoBenefit(p)} · {channelLabel(p.channel)} · jusqu&apos;au{" "}
+                      {new Date(p.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="l-ctas">
             <Link href="/inscription" className="l-btn l-btn-red">Créer ma carte <ChevronRight size={22} /></Link>
             <Link href="/connexion" className="l-btn l-btn-ghost">J&apos;ai déjà un compte</Link>
